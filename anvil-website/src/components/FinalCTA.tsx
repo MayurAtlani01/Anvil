@@ -7,17 +7,17 @@ interface FinalCTAProps {
 
 export const FinalCTA: React.FC<FinalCTAProps> = ({ onGetAnvil }) => {
   return (
-    <section className="py-20 relative overflow-hidden">
-      <div className="max-w-7xl mx-auto px-6 md:px-12">
+    <section className="py-12 sm:py-16 md:py-20 relative overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12">
         
         {/* Main CTA Card Container */}
-        <div className="relative rounded-3xl bg-[#161616] border border-[#2A2A2A] px-8 py-16 md:py-20 md:px-16 overflow-hidden shadow-2xl">
+        <div className="relative rounded-3xl bg-[#161616] border border-[#2A2A2A] px-5 py-10 sm:px-8 sm:py-14 md:py-20 md:px-16 overflow-hidden shadow-2xl">
           
           {/* Ambient Warm Underglow within the card */}
           <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-3/4 h-36 bg-[#FF6B5A]/15 blur-3xl rounded-full pointer-events-none" />
 
           {/* Right Background Graphic: Stylized Glowing Geometric 'A' Watermark */}
-          <div className="absolute right-8 md:right-16 bottom-0 w-64 md:w-80 h-64 md:h-80 opacity-25 pointer-events-none select-none">
+          <div className="absolute right-4 sm:right-8 md:right-16 bottom-0 w-48 sm:w-64 md:w-80 h-48 sm:h-64 md:h-80 opacity-20 sm:opacity-25 pointer-events-none select-none">
             <svg viewBox="0 0 200 200" fill="none" className="w-full h-full text-[#FF6B5A]">
               <path
                 d="M100 20 L180 180 H140 L100 90 L60 180 H20 Z"
@@ -34,16 +34,16 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onGetAnvil }) => {
             
             {/* Left Column: Mascot + Handwritten Note */}
             <div className="lg:col-span-3 flex flex-col items-center lg:items-start text-center lg:text-left select-none">
-              <div className="relative">
+              <div className="relative flex flex-col items-center lg:items-start">
                 {/* Handwritten Callout */}
                 <div className="mb-2">
-                  <p className="font-handwritten text-xl md:text-2xl text-[#FF6B5A] font-bold tracking-wide -rotate-3">
+                  <p className="font-handwritten text-lg sm:text-xl md:text-2xl text-[#FF6B5A] font-bold tracking-wide -rotate-3">
                     Same browser. <br />
                     A brighter you.
                   </p>
-                  <div className="flex justify-start pl-6 pt-1 text-[#FF6B5A]">
+                  <div className="flex justify-center lg:justify-start pl-0 lg:pl-6 pt-1 text-[#FF6B5A]">
                     <svg
-                      className="w-6 h-6 transform rotate-45"
+                      className="w-5 h-5 sm:w-6 sm:h-6 transform rotate-45"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -58,7 +58,7 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onGetAnvil }) => {
                 </div>
 
                 {/* 3D Mascot Image */}
-                <div className="w-28 h-28 md:w-36 md:h-36">
+                <div className="w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 animate-float">
                   <img
                     src="/mascot.png"
                     alt="Anvil Study Buddy"
@@ -69,17 +69,17 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onGetAnvil }) => {
             </div>
 
             {/* Center Column: Eyebrow, Main Headline, Subtitle, CTA Button */}
-            <div className="lg:col-span-6 text-center space-y-5">
-              <div className="text-xs font-semibold tracking-[0.25em] text-[#737373] uppercase">
+            <div className="lg:col-span-6 text-center space-y-4 sm:space-y-5">
+              <div className="text-[11px] sm:text-xs font-semibold tracking-[0.2em] sm:tracking-[0.25em] text-[#737373] uppercase">
                 READY TO UPGRADE YOUR BROWSER?
               </div>
 
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#F5F5F5] tracking-tight leading-tight">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-[#F5F5F5] tracking-tight leading-tight">
                 Make your browser <br />
                 <span className="text-[#FF6B5A]">work smarter.</span>
               </h2>
 
-              <p className="text-sm md:text-base text-[#A7A7A7] max-w-md mx-auto">
+              <p className="text-xs sm:text-sm md:text-base text-[#A7A7A7] max-w-md mx-auto leading-relaxed">
                 Get Anvil and turn the web into your learning space.
               </p>
 
@@ -87,10 +87,10 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onGetAnvil }) => {
                 <button
                   type="button"
                   onClick={onGetAnvil}
-                  className="inline-flex items-center gap-3 px-8 py-3.5 rounded-full bg-[#FF6B5A] hover:bg-[#FF7A6A] active:bg-[#FF5A48] text-[#111111] font-bold text-base transition-all duration-200 shadow-coral hover:shadow-coralGlow hover:-translate-y-0.5 cursor-pointer"
+                  className="w-full sm:w-auto justify-center inline-flex items-center gap-3 px-7 sm:px-8 py-3.5 rounded-full bg-[#FF6B5A] hover:bg-[#FF7A6A] active:bg-[#FF5A48] text-[#111111] font-bold text-base transition-all duration-200 shadow-coral hover:shadow-coralGlow hover:-translate-y-0.5 cursor-pointer"
                 >
                   {/* Google Chrome Logo */}
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none">
                     <circle cx="12" cy="12" r="10" fill="#FFFFFF" fillOpacity="0.25" />
                     <path
                       d="M12 2C7.03 2 2.9 5.66 2.12 10.41L7.54 19.8C6.59 17.65 6.46 15.11 7.42 12.8C8.5 10.18 10.96 8.35 13.82 8.05L12 2Z"
@@ -107,8 +107,8 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onGetAnvil }) => {
                     <circle cx="12" cy="12" r="4.5" fill="#4285F4" />
                     <circle cx="12" cy="12" r="3.5" fill="#FFFFFF" />
                   </svg>
-                  <span>Get Anvil</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <span>Get Anvil for Chrome</span>
+                  <ArrowRight className="w-4 h-4 shrink-0" />
                 </button>
               </div>
             </div>

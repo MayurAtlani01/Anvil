@@ -2,14 +2,14 @@ import React from 'react';
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="border-t border-[#1F1F1F] bg-[#111111] pt-12 pb-10 text-sm text-[#737373]">
-      <div className="max-w-7xl mx-auto px-6 md:px-12 space-y-10">
+    <footer className="border-t border-[#1F1F1F] bg-[#111111] pt-10 pb-10 text-sm text-[#737373]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 space-y-8 sm:space-y-10">
         
         {/* Top Row: Brand & Tagline on Left, Navigation in Middle, Socials on Right */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 sm:gap-8">
           
           {/* Left: Logo + Brand + Tagline */}
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 sm:gap-4 text-center md:text-left">
             <a href="#" className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-[#1C1C1C] border border-[#2A2A2A] p-1 flex items-center justify-center">
                 <img
@@ -32,33 +32,33 @@ export const Footer: React.FC = () => {
           </div>
 
           {/* Middle: Links */}
-          <nav className="flex flex-wrap items-center justify-center gap-6 text-xs text-[#A7A7A7]">
-            <a href="#features" className="hover:text-[#F5F5F5] transition-colors">
+          <nav className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs text-[#A7A7A7]">
+            <a href="#features" className="hover:text-[#F5F5F5] transition-colors py-1">
               Features
             </a>
-            <a href="#reading" className="hover:text-[#F5F5F5] transition-colors">
+            <a href="#reading" className="hover:text-[#F5F5F5] transition-colors py-1">
               Reading
             </a>
-            <a href="#exam" className="hover:text-[#F5F5F5] transition-colors">
+            <a href="#exam" className="hover:text-[#F5F5F5] transition-colors py-1">
               Exam
             </a>
-            <a href="#interview" className="hover:text-[#F5F5F5] transition-colors">
+            <a href="#interview" className="hover:text-[#F5F5F5] transition-colors py-1">
               Interview
             </a>
-            <a href="#how-it-works" className="hover:text-[#F5F5F5] transition-colors">
+            <a href="#how-it-works" className="hover:text-[#F5F5F5] transition-colors py-1">
               How it works
             </a>
           </nav>
 
-          {/* Right: Social Icons */}
-          <div className="flex items-center gap-4 text-[#A7A7A7]">
+          {/* Right: Social Icons with 40x40 Touch Targets */}
+          <div className="flex items-center gap-2 sm:gap-3 text-[#A7A7A7]">
             {/* X / Twitter */}
             <a
               href="https://twitter.com"
               target="_blank"
               rel="noreferrer"
               aria-label="X (Twitter)"
-              className="w-8 h-8 rounded-lg hover:bg-[#1C1C1C] border border-transparent hover:border-[#2A2A2A] flex items-center justify-center hover:text-[#F5F5F5] transition"
+              className="w-10 h-10 rounded-xl hover:bg-[#1C1C1C] border border-[#222222] sm:border-transparent hover:border-[#2A2A2A] flex items-center justify-center hover:text-[#F5F5F5] transition"
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
@@ -71,7 +71,7 @@ export const Footer: React.FC = () => {
               target="_blank"
               rel="noreferrer"
               aria-label="Instagram"
-              className="w-8 h-8 rounded-lg hover:bg-[#1C1C1C] border border-transparent hover:border-[#2A2A2A] flex items-center justify-center hover:text-[#F5F5F5] transition"
+              className="w-10 h-10 rounded-xl hover:bg-[#1C1C1C] border border-[#222222] sm:border-transparent hover:border-[#2A2A2A] flex items-center justify-center hover:text-[#F5F5F5] transition"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                 <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
@@ -86,7 +86,7 @@ export const Footer: React.FC = () => {
               target="_blank"
               rel="noreferrer"
               aria-label="GitHub"
-              className="w-8 h-8 rounded-lg hover:bg-[#1C1C1C] border border-transparent hover:border-[#2A2A2A] flex items-center justify-center hover:text-[#F5F5F5] transition"
+              className="w-10 h-10 rounded-xl hover:bg-[#1C1C1C] border border-[#222222] sm:border-transparent hover:border-[#2A2A2A] flex items-center justify-center hover:text-[#F5F5F5] transition"
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                 <path
@@ -101,7 +101,7 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Bottom Bar: Copyright & Tag */}
-        <div className="pt-6 border-t border-[#1F1F1F] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#525252]">
+        <div className="pt-6 border-t border-[#1F1F1F] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#525252] text-center sm:text-left">
           <p>© 2025 Anvil. All rights reserved.</p>
           <p className="font-medium text-[#737373]">Built for curious minds.</p>
         </div>

@@ -19,35 +19,35 @@ export const GetAnvilModal: React.FC<GetAnvilModalProps> = ({ isOpen, onClose })
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
       {/* Modal Dialog Card */}
-      <div className="relative w-full max-w-lg rounded-2xl bg-[#171717] border border-[#2D2D2D] shadow-2xl p-6 md:p-7 text-left overflow-hidden">
+      <div className="relative w-full max-w-lg max-h-[90dvh] rounded-2xl bg-[#171717] border border-[#2D2D2D] shadow-2xl p-4 sm:p-6 md:p-7 text-left overflow-y-auto">
         
         {/* Subtle Ambient Coral Backlight */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#FF6B5A]/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-[#262626]">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#1F1F1F] border border-[#FF6B5A]/30 p-1.5 flex items-center justify-center">
+        <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-[#262626]">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#1F1F1F] border border-[#FF6B5A]/30 p-1.5 flex items-center justify-center shrink-0">
               <img src="/icons/a-logo.png" alt="Anvil" className="w-full h-full object-contain" />
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-[#F5F5F5]">Install Anvil</h3>
-              <p className="text-xs text-[#A7A7A7]">Manifest V3 Learning Assistant for Chrome</p>
+            <div className="min-w-0">
+              <h3 className="text-base sm:text-lg font-bold text-[#F5F5F5] truncate">Install Anvil</h3>
+              <p className="text-[11px] sm:text-xs text-[#A7A7A7] truncate">Manifest V3 Learning Assistant for Chrome</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-[#222222] hover:bg-[#2C2C2C] text-[#A7A7A7] hover:text-[#F5F5F5] flex items-center justify-center transition cursor-pointer"
+            className="w-8 h-8 rounded-lg bg-[#222222] hover:bg-[#2C2C2C] text-[#A7A7A7] hover:text-[#F5F5F5] flex items-center justify-center transition cursor-pointer shrink-0 ml-2"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex rounded-xl bg-[#121212] p-1 my-5 border border-[#262626]">
+        <div className="flex rounded-xl bg-[#121212] p-1 my-4 sm:my-5 border border-[#262626]">
           <button
             type="button"
             onClick={() => setActiveTab('developer')}

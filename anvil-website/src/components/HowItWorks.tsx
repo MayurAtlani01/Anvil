@@ -42,15 +42,15 @@ export const HowItWorks: React.FC = () => {
   ];
 
   return (
-    <section id="how-it-works" className="py-24 relative overflow-hidden">
-      <div className="max-w-7xl mx-auto px-6 md:px-12">
+    <section id="how-it-works" className="py-14 sm:py-20 md:py-24 relative overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12">
         
         {/* Section Header */}
-        <div className="mb-16">
-          <div className="text-xs font-semibold tracking-[0.25em] text-[#737373] uppercase mb-3">
+        <div className="mb-10 sm:mb-16">
+          <div className="text-xs font-semibold tracking-[0.25em] text-[#737373] uppercase mb-2 sm:mb-3">
             HOW IT WORKS
           </div>
-          <h2 className="text-4xl md:text-5xl font-black text-[#F5F5F5] tracking-tight leading-[1.1]">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#F5F5F5] tracking-tight leading-[1.1]">
             Get started <br />
             <span className="text-[#FF6B5A]">in minutes.</span>
           </h2>
@@ -61,25 +61,25 @@ export const HowItWorks: React.FC = () => {
           {/* Subtle dotted connector line behind steps on desktop */}
           <div className="hidden md:block absolute top-1/2 left-16 right-16 h-[1px] border-t border-dashed border-[#2E2E2E] -translate-y-1/2 z-0" />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8 relative z-10">
             {steps.map((step) => (
               <div
                 key={step.num}
-                className="flex items-start gap-4 p-4 rounded-xl bg-[#111111]/80 backdrop-blur-xs group transition-all"
+                className="relative flex items-start gap-3.5 sm:gap-4 p-4 sm:p-5 rounded-2xl bg-[#161616] border border-[#262626] md:bg-[#111111]/80 md:border-transparent group transition-all"
               >
                 {/* Large Number in Coral */}
-                <span className="text-3xl font-extrabold text-[#FF6B5A] font-mono tracking-tight shrink-0 mt-1">
+                <span className="text-2xl sm:text-3xl font-extrabold text-[#FF6B5A] font-mono tracking-tight shrink-0 mt-0.5 sm:mt-1">
                   {step.num}
                 </span>
 
                 {/* Icon Container Squircle */}
-                <div className="w-13 h-13 rounded-xl bg-[#1A1A1A] border border-[#2B2B2B] flex items-center justify-center shrink-0 group-hover:border-[#FF6B5A]/50 transition-colors shadow-sm">
+                <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-xl bg-[#1A1A1A] border border-[#2B2B2B] flex items-center justify-center shrink-0 group-hover:border-[#FF6B5A]/50 transition-colors shadow-sm">
                   {step.icon}
                 </div>
 
                 {/* Content */}
                 <div className="space-y-1 pt-0.5">
-                  <h3 className="text-base font-bold text-[#F5F5F5] tracking-tight">
+                  <h3 className="text-sm sm:text-base font-bold text-[#F5F5F5] tracking-tight">
                     {step.title}
                   </h3>
                   <p className="text-xs text-[#A7A7A7] leading-relaxed">

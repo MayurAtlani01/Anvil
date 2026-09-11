@@ -92,25 +92,25 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-xl rounded-2xl bg-[#171717] border border-[#2D2D2D] shadow-2xl overflow-hidden text-left">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-6 sm:pt-20 p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="relative w-full max-w-xl max-h-[85dvh] flex flex-col rounded-2xl bg-[#171717] border border-[#2D2D2D] shadow-2xl overflow-hidden text-left">
         
         {/* Search Input Bar */}
-        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[#262626] bg-[#141414]">
-          <Search className="w-5 h-5 text-[#A7A7A7] shrink-0" />
+        <div className="flex items-center gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-3 sm:py-3.5 border-b border-[#262626] bg-[#141414] shrink-0">
+          <Search className="w-4 h-4 sm:w-5 sm:h-5 text-[#A7A7A7] shrink-0" />
           <input
             type="text"
             placeholder="Search features, modes, shortcuts..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
-            className="flex-1 bg-transparent text-sm text-[#F5F5F5] placeholder-[#737373] focus:outline-none"
+            className="flex-1 bg-transparent text-base md:text-sm text-[#F5F5F5] placeholder-[#737373] focus:outline-none"
           />
           {query && (
             <button
               type="button"
               onClick={() => setQuery('')}
-              className="text-xs text-[#737373] hover:text-[#F5F5F5]"
+              className="text-xs text-[#737373] hover:text-[#F5F5F5] px-1 py-1"
             >
               Clear
             </button>
@@ -118,14 +118,14 @@ export const SearchModal: React.FC<SearchModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-7 h-7 rounded-md bg-[#222222] hover:bg-[#2C2C2C] text-[#A7A7A7] hover:text-[#F5F5F5] flex items-center justify-center transition cursor-pointer"
+            className="w-8 h-8 rounded-lg bg-[#222222] hover:bg-[#2C2C2C] text-[#A7A7A7] hover:text-[#F5F5F5] flex items-center justify-center transition cursor-pointer shrink-0"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Search Results List */}
-        <div className="max-h-80 overflow-y-auto p-2 space-y-1">
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {filtered.length > 0 ? (
             filtered.map((item) => {
               const IconComp = item.icon;

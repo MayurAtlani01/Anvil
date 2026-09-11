@@ -26,10 +26,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onGetAnvil, onOpenSearch }) => {
           : 'bg-transparent py-5'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-6 md:px-12 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 flex items-center justify-between">
         
         {/* Brand Logo & Wordmark */}
-        <a href="#" className="flex items-center gap-3 group focus:outline-none select-none">
+        <a href="#" className="flex items-center gap-2.5 sm:gap-3 group focus:outline-none select-none">
           <div className="w-8 h-8 rounded-lg bg-[#1D1D1D] border border-[#2A2A2A] p-1 flex items-center justify-center transition-transform group-hover:scale-105 shadow-xs">
             <img
               src="/icons/a-logo.png"
@@ -37,7 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onGetAnvil, onOpenSearch }) => {
               className="w-full h-full object-contain"
             />
           </div>
-          <span className="font-extrabold text-lg tracking-[0.15em] text-[#F5F5F5] uppercase">
+          <span className="font-extrabold text-base sm:text-lg tracking-[0.15em] text-[#F5F5F5] uppercase">
             Anvil
           </span>
         </a>
@@ -76,7 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onGetAnvil, onOpenSearch }) => {
           </a>
         </nav>
 
-        {/* Right Actions: Search & Get Anvil */}
+        {/* Right Actions Desktop: Search & Get Anvil */}
         <div className="hidden md:flex items-center gap-3">
           <button
             type="button"
@@ -116,69 +116,82 @@ export const Navbar: React.FC<NavbarProps> = ({ onGetAnvil, onOpenSearch }) => {
           </button>
         </div>
 
-        {/* Mobile Hamburger Button */}
-        <button
-          type="button"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden w-10 h-10 rounded-lg bg-[#1D1D1D] border border-[#2A2A2A] flex items-center justify-center text-[#F5F5F5] cursor-pointer"
-          aria-label="Toggle menu"
-        >
-          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        {/* Mobile Action Controls: Quick Search + Hamburger Button */}
+        <div className="flex md:hidden items-center gap-2">
+          <button
+            type="button"
+            onClick={onOpenSearch}
+            aria-label="Search features"
+            className="w-10 h-10 rounded-lg bg-[#1D1D1D] border border-[#2A2A2A] flex items-center justify-center text-[#A7A7A7] hover:text-[#F5F5F5] active:bg-[#252525] transition cursor-pointer"
+          >
+            <Search className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="w-10 h-10 rounded-lg bg-[#1D1D1D] border border-[#2A2A2A] flex items-center justify-center text-[#F5F5F5] active:bg-[#252525] transition cursor-pointer"
+            aria-label="Toggle menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
 
       </div>
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-[#161616] border-b border-[#2A2A2A] px-6 py-6 space-y-4 animate-in fade-in duration-200">
-          <nav className="flex flex-col gap-3.5 text-base font-medium text-[#A7A7A7]">
+        <div className="md:hidden bg-[#141414]/98 backdrop-blur-xl border-b border-[#2A2A2A] px-5 py-5 space-y-4 max-h-[calc(100dvh-4.5rem)] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200 shadow-2xl">
+          <nav className="flex flex-col gap-1 text-sm font-medium text-[#A7A7A7]">
             <a
               href="#features"
               onClick={() => setMobileMenuOpen(false)}
-              className="hover:text-[#F5F5F5] py-1"
+              className="hover:text-[#F5F5F5] hover:bg-[#1E1E1E] rounded-lg px-3.5 py-3 min-h-[44px] flex items-center transition-colors"
             >
               Features
             </a>
             <a
               href="#reading"
               onClick={() => setMobileMenuOpen(false)}
-              className="hover:text-[#F5F5F5] py-1"
+              className="hover:text-[#F5F5F5] hover:bg-[#1E1E1E] rounded-lg px-3.5 py-3 min-h-[44px] flex items-center transition-colors"
             >
-              Reading
+              Reading Mode
             </a>
             <a
               href="#exam"
               onClick={() => setMobileMenuOpen(false)}
-              className="hover:text-[#F5F5F5] py-1"
+              className="hover:text-[#F5F5F5] hover:bg-[#1E1E1E] rounded-lg px-3.5 py-3 min-h-[44px] flex items-center transition-colors"
             >
-              Exam
+              Exam Mode
             </a>
             <a
               href="#interview"
               onClick={() => setMobileMenuOpen(false)}
-              className="hover:text-[#F5F5F5] py-1"
+              className="hover:text-[#F5F5F5] hover:bg-[#1E1E1E] rounded-lg px-3.5 py-3 min-h-[44px] flex items-center transition-colors"
             >
-              Interview
+              Interview Mode
             </a>
             <a
               href="#how-it-works"
               onClick={() => setMobileMenuOpen(false)}
-              className="hover:text-[#F5F5F5] py-1"
+              className="hover:text-[#F5F5F5] hover:bg-[#1E1E1E] rounded-lg px-3.5 py-3 min-h-[44px] flex items-center transition-colors"
             >
               How it works
             </a>
           </nav>
-          <div className="pt-2 flex flex-col gap-2">
+
+          <div className="pt-2 flex flex-col gap-2.5 border-t border-[#222222]">
             <button
               type="button"
               onClick={() => {
                 setMobileMenuOpen(false);
                 onOpenSearch();
               }}
-              className="w-full py-2.5 rounded-full bg-[#202020] text-[#A7A7A7] text-sm flex items-center justify-center gap-2 border border-[#2D2D2D]"
+              className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-[#1D1D1D] hover:bg-[#252525] text-[#A7A7A7] hover:text-[#F5F5F5] text-sm flex items-center justify-center gap-2 border border-[#2A2A2A] transition cursor-pointer"
             >
               <Search className="w-4 h-4" />
-              <span>Search features</span>
+              <span>Search features (Ctrl+K)</span>
             </button>
             <button
               type="button"
@@ -186,9 +199,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onGetAnvil, onOpenSearch }) => {
                 setMobileMenuOpen(false);
                 onGetAnvil();
               }}
-              className="w-full py-3 rounded-full bg-[#FF6B5A] text-[#111111] font-bold text-sm flex items-center justify-center gap-2 shadow-coral"
+              className="w-full min-h-[44px] py-3 px-4 rounded-xl bg-[#FF6B5A] active:bg-[#FF5A48] text-[#111111] font-bold text-sm flex items-center justify-center gap-2 shadow-coral transition cursor-pointer"
             >
-              <span>Get Anvil</span>
+              <span>Get Anvil for Chrome</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
