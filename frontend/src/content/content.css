@@ -1,0 +1,826 @@
+/* ==========================================================================
+   ANVIL LEARNING ASSISTANT — CONTENT SCRIPT DESIGN SYSTEM (SHADOW DOM ISOLATED)
+   Supports Dynamic Themes (Dark / Light) & User-Configured Custom Accent Colors
+   ========================================================================== */
+
+:host {
+  display: block !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 2147483647 !important;
+  pointer-events: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+  color-scheme: dark;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--anvil-text, #F5F5F5);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Theme Tokens — Default Dark */
+  --anvil-accent: #FF6845;
+  --anvil-accent-rgb: 255, 104, 69;
+  --anvil-accent-glow: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.35);
+  --anvil-accent-glow-subtle: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.16);
+  --anvil-accent-glow-strong: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.55);
+  --anvil-accent-surface: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.10);
+  --anvil-accent-surface-hover: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.18);
+  --anvil-accent-border: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.28);
+  --anvil-accent-border-active: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.55);
+  --anvil-bg: #151515;
+  --anvil-card-bg: #151515;
+  --anvil-card-bg-subtle: #1D1D1D;
+  --anvil-card-header-bg: #1B1B1B;
+  --anvil-border: #2A2A2A;
+  --anvil-border-subtle: #242424;
+  --anvil-text: #F5F5F5;
+  --anvil-text-muted: #A7A7A7;
+  --anvil-text-subtle: #737373;
+  --anvil-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.75), 0 0 1px rgba(255, 255, 255, 0.1);
+  --anvil-card-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.8), 0 0 1px rgba(255, 255, 255, 0.1);
+  --anvil-input-bg: #1D1D1D;
+  --anvil-input-border: #2A2A2A;
+}
+
+/* Light Theme Mode */
+:host(.light),
+.light,
+.anvil-theme-wrapper.light {
+  color-scheme: light !important;
+  color: #111827 !important;
+
+  --anvil-bg: #FFFFFF;
+  --anvil-card-bg: #FFFFFF;
+  --anvil-card-bg-subtle: #F9FAFB;
+  --anvil-card-header-bg: #F3F4F6;
+  --anvil-border: #E5E7EB;
+  --anvil-border-subtle: #E5E7EB;
+  --anvil-text: #111827;
+  --anvil-text-muted: #4B5563;
+  --anvil-text-subtle: #9CA3AF;
+  --anvil-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.08);
+  --anvil-card-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.1);
+  --anvil-input-bg: #F9FAFB;
+  --anvil-input-border: #D1D5DB;
+}
+
+#anvil-content-app-root {
+  display: contents !important;
+}
+
+.anvil-theme-wrapper {
+  display: contents !important;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ==========================================================================
+   1. COLLAPSED FLOATING FEATURE RAIL (RIGHT SIDE)
+   ========================================================================== */
+
+.anvil-collapsed-rail {
+  position: fixed;
+  right: 20px;
+  left: auto;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2147483645;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 52px;
+  padding: 8px 6px;
+  background-color: var(--anvil-bg, #151515);
+  border: 1px solid var(--anvil-border, #2A2A2A);
+  border-radius: 18px;
+  box-shadow: var(--anvil-shadow);
+  user-select: none;
+  pointer-events: auto !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+  animation: anvilRailSlideInRight 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  gap: 5px;
+}
+
+@keyframes anvilRailSlideInRight {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+.anvil-rail-logo {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--anvil-card-header-bg, #1B1B1B);
+  border: 1px solid var(--anvil-border-subtle, #242424);
+  color: var(--anvil-accent, #FF6845);
+  cursor: pointer;
+  outline: none;
+  padding: 0;
+  transition: all 180ms ease;
+  position: relative;
+  pointer-events: auto !important;
+}
+
+.anvil-rail-logo:hover {
+  background: var(--anvil-accent-surface, rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.12));
+  border-color: var(--anvil-accent);
+  transform: scale(1.04);
+  box-shadow: 0 0 14px var(--anvil-accent-glow);
+}
+
+.anvil-rail-logo:active {
+  transform: scale(0.92);
+}
+
+.anvil-rail-divider {
+  width: 28px;
+  height: 1px;
+  background: var(--anvil-border-subtle, #242424);
+  margin: 3px 0;
+}
+
+.anvil-rail-btn {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--anvil-card-bg-subtle, #1D1D1D);
+  border: 1px solid var(--anvil-border-subtle, #242424);
+  color: var(--anvil-text-muted, #A7A7A7);
+  cursor: pointer;
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  outline: none;
+  pointer-events: auto !important;
+}
+
+.anvil-rail-btn:hover {
+  background: var(--anvil-accent-surface, rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.08));
+  color: var(--anvil-accent);
+  border-color: var(--anvil-accent-border-active, var(--anvil-accent));
+  transform: translateY(-1px);
+}
+
+.anvil-rail-btn:active {
+  transform: scale(0.96);
+}
+
+/* Active Feature State (User Accent + Ambient Glow) */
+.anvil-rail-btn.anvil-rail-btn-active {
+  background: var(--anvil-accent-surface, rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.14));
+  border: 1.5px solid var(--anvil-accent);
+  color: var(--anvil-accent);
+  box-shadow: 0 0 16px var(--anvil-accent-glow), inset 0 0 8px var(--anvil-accent-surface);
+}
+
+.anvil-rail-btn.anvil-rail-btn-active::after {
+  content: '';
+  position: absolute;
+  right: -5px;
+  left: auto;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 14px;
+  background: var(--anvil-accent);
+  border-radius: 2px;
+  box-shadow: 0 0 6px var(--anvil-accent);
+}
+
+/* Expand Button (Bottom) */
+.anvil-rail-expand-btn {
+  background: var(--anvil-card-bg-subtle, #181818);
+  border: 1px solid var(--anvil-border, #2A2A2A);
+  color: var(--anvil-text, #F5F5F5);
+}
+
+.anvil-rail-expand-btn:hover {
+  background: var(--anvil-accent);
+  border-color: var(--anvil-accent);
+  color: #FFFFFF;
+  box-shadow: 0 4px 14px var(--anvil-accent-glow);
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   2. FLOATING FEATURE TOOLTIP (OPENS TO THE LEFT OF RIGHT RAIL)
+   ========================================================================== */
+
+.anvil-rail-tooltip {
+  position: absolute;
+  right: calc(100% + 14px);
+  left: auto;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--anvil-bg, #181818);
+  border: 1px solid var(--anvil-border, #2A2A2A);
+  border-radius: 10px;
+  padding: 7px 12px;
+  min-width: 130px;
+  max-width: 200px;
+  box-shadow: var(--anvil-shadow);
+  pointer-events: none;
+  z-index: 2147483647;
+  white-space: nowrap;
+  animation: anvilTooltipFadeLeft 160ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.anvil-rail-tooltip::before {
+  content: '';
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent transparent var(--anvil-border, #2A2A2A);
+}
+
+.anvil-tooltip-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--anvil-text, #F5F5F5);
+  line-height: 1.2;
+}
+
+.anvil-tooltip-subtitle {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--anvil-text-muted, #A7A7A7);
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+@keyframes anvilTooltipFadeLeft {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+/* ==========================================================================
+   3. IN-PAGE FLOATING SUMMARY CARD (ALONGSIDE RIGHT RAIL)
+   ========================================================================== */
+
+.anvil-floating-card {
+  position: fixed;
+  right: 86px;
+  left: auto;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 360px;
+  max-width: calc(100vw - 120px);
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--anvil-card-bg, #151515);
+  border: 1px solid var(--anvil-border, #2A2A2A);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: var(--anvil-card-shadow);
+  z-index: 2147483646;
+  pointer-events: auto !important;
+  animation: anvilCardFadeInRight 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  color: var(--anvil-text, #F5F5F5);
+  transition: background-color 200ms ease, border-color 200ms ease;
+}
+
+.anvil-floating-card::-webkit-scrollbar {
+  width: 4px;
+}
+.anvil-floating-card::-webkit-scrollbar-thumb {
+  background: var(--anvil-border, #2A2A2A);
+  border-radius: 4px;
+}
+
+.anvil-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--anvil-border-subtle, #242424);
+}
+
+.anvil-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: var(--anvil-accent-surface, rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.1));
+  border: 1px solid var(--anvil-accent-border, rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.3));
+  color: var(--anvil-accent);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.anvil-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--anvil-text, #F5F5F5);
+  margin-bottom: 8px;
+  line-height: 1.35;
+}
+
+.anvil-card-body {
+  font-size: 12px;
+  color: var(--anvil-text-muted, #A7A7A7);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.anvil-bullet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.anvil-bullet-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--anvil-text, #D4D4D8);
+  line-height: 1.4;
+}
+
+.anvil-bullet-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--anvil-accent);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.anvil-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--anvil-border-subtle, #242424);
+}
+
+.anvil-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: var(--anvil-accent);
+  color: #FFFFFF;
+  border: none;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.anvil-btn-primary:hover {
+  opacity: 0.92;
+  box-shadow: 0 2px 8px var(--anvil-accent-glow);
+}
+
+.anvil-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: var(--anvil-card-bg-subtle, #1D1D1D);
+  color: var(--anvil-text-muted, #A7A7A7);
+  border: 1px solid var(--anvil-border, #2A2A2A);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.anvil-btn-secondary:hover {
+  background: var(--anvil-card-header-bg, #242424);
+  color: var(--anvil-text, #F5F5F5);
+  border-color: var(--anvil-border, #3A3A3A);
+}
+
+/* Inputs and textareas inside floating cards */
+.anvil-floating-card input,
+.anvil-floating-card textarea {
+  background: var(--anvil-input-bg, #1D1D1D) !important;
+  border: 1px solid var(--anvil-input-border, #2A2A2A) !important;
+  color: var(--anvil-text, #F5F5F5) !important;
+}
+
+/* ==========================================================================
+   4. IN-PAGE FLOATING AUDIO PLAYER (READ ALOUD)
+   ========================================================================== */
+
+.anvil-audio-bar {
+  position: fixed;
+  right: 86px;
+  left: auto;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--anvil-card-bg, #151515);
+  border: 1px solid var(--anvil-border, #2A2A2A);
+  border-radius: 12px;
+  box-shadow: var(--anvil-shadow);
+  z-index: 2147483646;
+  pointer-events: auto !important;
+  animation: anvilCardFadeInRight 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.anvil-audio-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--anvil-card-bg-subtle, #1D1D1D);
+  border: 1px solid var(--anvil-border-subtle, #242424);
+  color: var(--anvil-text, #F5F5F5);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.anvil-audio-btn:hover {
+  background: var(--anvil-accent);
+  border-color: var(--anvil-accent);
+  color: #FFFFFF;
+}
+
+.anvil-audio-btn-active {
+  background: var(--anvil-accent);
+  border-color: var(--anvil-accent);
+  color: #FFFFFF;
+}
+
+.anvil-speed-pill {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--anvil-card-bg-subtle, #1D1D1D);
+  border: 1px solid var(--anvil-border-subtle, #242424);
+  color: var(--anvil-text-muted, #A7A7A7);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: monospace;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.anvil-speed-pill:hover, .anvil-speed-pill.active {
+  background: var(--anvil-accent-surface, rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.12));
+  border-color: var(--anvil-accent);
+  color: var(--anvil-accent);
+}
+
+/* ==========================================================================
+   5. POPOVER & SELECTION TOOLBAR
+   ========================================================================== */
+
+.anvil-selection-toolbar {
+  position: absolute;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 5px;
+  border-radius: 10px;
+  background: var(--anvil-card-bg, #151515);
+  border: 1px solid var(--anvil-border, #2A2A2A);
+  box-shadow: var(--anvil-shadow);
+  color: var(--anvil-text, #F5F5F5);
+  font-size: 11px;
+  font-weight: 600;
+  user-select: none;
+  animation: anvilFadeIn 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.anvil-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--anvil-text-muted, #A7A7A7);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 120ms ease;
+}
+
+.anvil-toolbar-btn:hover {
+  background: var(--anvil-card-bg-subtle, #1D1D1D);
+  color: var(--anvil-text, #F5F5F5);
+}
+
+.anvil-toolbar-btn-brand {
+  color: var(--anvil-accent);
+}
+
+.anvil-toolbar-btn-brand:hover {
+  background: var(--anvil-accent-surface, rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.12));
+  color: var(--anvil-accent);
+}
+
+.anvil-toolbar-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--anvil-border, #2A2A2A);
+  margin: 0 2px;
+}
+
+.anvil-popover {
+  position: absolute;
+  z-index: 2147483646;
+  width: 290px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--anvil-card-bg, #151515);
+  border: 1px solid var(--anvil-border, #2A2A2A);
+  box-shadow: var(--anvil-shadow);
+  color: var(--anvil-text, #F5F5F5);
+  font-size: 12px;
+  animation: anvilCardFadeIn 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes anvilFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes anvilCardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0) scale(1);
+  }
+}
+
+/* ==========================================================================
+   6. MODE SWITCH TOAST NOTIFICATION
+   ========================================================================== */
+
+.anvil-mode-toast {
+  position: fixed;
+  right: 84px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2147483646;
+  background: var(--anvil-bg, #141416);
+  border: 1px solid var(--anvil-border, #2B2D31);
+  border-radius: 14px;
+  padding: 12px 15px;
+  width: 275px;
+  user-select: none;
+  pointer-events: auto !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: anvilToastSlideIn 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+@keyframes anvilToastSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) translateX(16px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0) scale(1);
+  }
+}
+
+.anvil-mode-toast-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.anvil-mode-toast-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+
+.anvil-mode-toast-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  animation: anvilToastDotPulse 1.6s infinite ease-in-out;
+}
+
+@keyframes anvilToastDotPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+}
+
+.anvil-mode-toast-close {
+  background: transparent;
+  border: none;
+  color: var(--anvil-text-subtle, #71717A);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 120ms ease;
+}
+
+.anvil-mode-toast-close:hover {
+  color: var(--anvil-text, #E4E4E7);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.anvil-mode-toast-main {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.anvil-mode-toast-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.anvil-mode-toast-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.anvil-mode-toast-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--anvil-text, #FFFFFF);
+  line-height: 1.25;
+}
+
+.anvil-mode-toast-desc {
+  font-size: 11px;
+  color: var(--anvil-text-muted, #A1A1AA);
+  line-height: 1.35;
+  margin-top: 2px;
+  white-space: normal;
+}
+
+.anvil-mode-toast-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--anvil-text-subtle, #71717A);
+  padding-top: 8px;
+  border-top: 1px solid var(--anvil-border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.anvil-mode-toast-hint strong {
+  color: var(--anvil-accent);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   7. IN-CARD SUBCARDS & LIGHT THEME AUTO-OVERRIDES
+   Ensures deep nested components in Floating cards immediately adapt to Light mode
+   ========================================================================== */
+
+.light [style*="background: #1B1B1B"],
+.light [style*="background: #1b1b1b"],
+.light [style*="background:#1B1B1B"],
+.light [style*="background:#1b1b1b"],
+.light [style*="background: rgb(27, 27, 27)"],
+.light [style*="background: #1D1D1D"],
+.light [style*="background: #1d1d1d"],
+.light [style*="background:#1D1D1D"],
+.light [style*="background:#1d1d1d"],
+.light [style*="background: rgb(29, 29, 29)"],
+:host(.light) [style*="background: #1B1B1B"],
+:host(.light) [style*="background: #1b1b1b"],
+:host(.light) [style*="background:#1B1B1B"],
+:host(.light) [style*="background:#1b1b1b"],
+:host(.light) [style*="background: rgb(27, 27, 27)"],
+:host(.light) [style*="background: #1D1D1D"],
+:host(.light) [style*="background: #1d1d1d"],
+:host(.light) [style*="background:#1D1D1D"],
+:host(.light) [style*="background:#1d1d1d"],
+:host(.light) [style*="background: rgb(29, 29, 29)"] {
+  background: #F9FAFB !important;
+  border-color: #E5E7EB !important;
+  color: #111827 !important;
+}
+
+.light [style*="color: #F5F5F5"],
+.light [style*="color: #f5f5f5"],
+.light [style*="color: rgb(245, 245, 245)"],
+.light [style*="color:#F5F5F5"],
+.light [style*="color:#f5f5f5"],
+:host(.light) [style*="color: #F5F5F5"],
+:host(.light) [style*="color: #f5f5f5"],
+:host(.light) [style*="color: rgb(245, 245, 245)"],
+:host(.light) [style*="color:#F5F5F5"],
+:host(.light) [style*="color:#f5f5f5"] {
+  color: #111827 !important;
+}
+
+.light [style*="color: #A7A7A7"],
+.light [style*="color: #a7a7a7"],
+.light [style*="color: rgb(167, 167, 167)"],
+.light [style*="color:#A7A7A7"],
+.light [style*="color:#a7a7a7"],
+:host(.light) [style*="color: #A7A7A7"],
+:host(.light) [style*="color: #a7a7a7"],
+:host(.light) [style*="color: rgb(167, 167, 167)"],
+:host(.light) [style*="color:#A7A7A7"],
+:host(.light) [style*="color:#a7a7a7"] {
+  color: #4B5563 !important;
+}
+
+.light [style*="color: #737373"],
+.light [style*="color: #71717A"],
+:host(.light) [style*="color: #737373"],
+:host(.light) [style*="color: #71717A"] {
+  color: #6B7280 !important;
+}
+
+.light [style*="border: 1px solid #242424"],
+.light [style*="border: 1px solid #2A2A2A"],
+.light [style*="border-color: #242424"],
+.light [style*="border-color: #2A2A2A"],
+:host(.light) [style*="border: 1px solid #242424"],
+:host(.light) [style*="border: 1px solid #2A2A2A"],
+:host(.light) [style*="border-color: #242424"],
+:host(.light) [style*="border-color: #2A2A2A"] {
+  border-color: #E5E7EB !important;
+}
