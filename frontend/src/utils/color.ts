@@ -37,9 +37,8 @@ export function getRgbString(color: string): string {
   return `${r}, ${g}, ${b}`;
 }
 
-export function getAccentGlow(color: string, alpha = 0.35): string {
-  const { r, g, b } = hexToRgb(color);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+export function getAccentGlow(_color: string, _alpha = 0.35): string {
+  return 'transparent';
 }
 
 export function getAccentSurface(color: string, alpha = 0.1): string {
@@ -64,8 +63,7 @@ export function getContrastTextColor(hex: string): string {
 
 /**
  * Returns a complete dictionary of CSS variable tokens dynamically derived from an accent color.
- * This ensures that when the user picks any accent color, ALL glows, surface tints, borders,
- * active indicators, and text colors update cohesively throughout the entire application.
+ * Glow effects are disabled across the UI for crisp, solid contrast.
  */
 export function getAccentStyles(accentColor: string): Record<string, string> {
   const { r, g, b } = hexToRgb(accentColor);
@@ -76,9 +74,9 @@ export function getAccentStyles(accentColor: string): Record<string, string> {
     '--brand-primary': accentColor,
     '--accent-color': accentColor,
     '--anvil-accent-rgb': rgb,
-    '--anvil-accent-glow': `rgba(${rgb}, 0.35)`,
-    '--anvil-accent-glow-subtle': `rgba(${rgb}, 0.16)`,
-    '--anvil-accent-glow-strong': `rgba(${rgb}, 0.55)`,
+    '--anvil-accent-glow': 'transparent',
+    '--anvil-accent-glow-subtle': 'transparent',
+    '--anvil-accent-glow-strong': 'transparent',
     '--anvil-accent-surface': `rgba(${rgb}, 0.10)`,
     '--anvil-accent-surface-hover': `rgba(${rgb}, 0.18)`,
     '--anvil-accent-border': `rgba(${rgb}, 0.28)`,

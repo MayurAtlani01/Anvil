@@ -4,32 +4,28 @@ import {
   Sigma,
   ScrollText,
   Search,
-  Layers,
   BarChart2,
   PieChart,
   Bookmark as BookmarkIcon,
   X,
-  Sparkles,
   ExternalLink,
   CheckCircle2,
   BookmarkCheck,
 } from 'lucide-react';
 import { ExamFeatureId } from './ExamCollapsedRail';
-import { examService, bookmarksService, progressService, flashcardsService } from '@/services';
+import { examService, bookmarksService, progressService } from '@/services';
 import { Formula, Question, RevisionNote, Bookmark, DifficultyLevel } from '@/types';
 
 interface FloatingExamCardProps {
   feature: ExamFeatureId;
   onClose: () => void;
   onExpandToSidePanel?: () => void;
-  onCreateFlashcard?: (text: string) => void;
 }
 
 export const FloatingExamCard: React.FC<FloatingExamCardProps> = ({
   feature,
   onClose,
   onExpandToSidePanel,
-  onCreateFlashcard,
 }) => {
   const [pyqs, setPyqs] = useState<Question[]>([]);
   const [formulas, setFormulas] = useState<Formula[]>([]);
@@ -40,7 +36,6 @@ export const FloatingExamCard: React.FC<FloatingExamCardProps> = ({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyLevel | 'all'>('all');
-  const [savedFlashcardId, setSavedFlashcardId] = useState<string | null>(null);
 
   useEffect(() => {
     examService.getPYQs().then((q) => setPyqs(q)).catch(() => {});
@@ -57,20 +52,7 @@ export const FloatingExamCard: React.FC<FloatingExamCardProps> = ({
     }).catch(() => {});
   }, [feature]);
 
-  const handleMakeFormulaFlashcard = async (f: Formula) => {
-    try {
-      await flashcardsService.create({
-        front: `Formula: ${f.name} (${f.subject})`,
-        back: `${f.formula}\n\nExplanation: ${f.explanation}`,
-        sourceMode: 'exam',
-        contentType: 'formula',
-      });
-      setSavedFlashcardId(f.id);
-      setTimeout(() => setSavedFlashcardId(null), 2000);
-    } catch (err) {
-      console.debug('[Anvil Exam] Failed to create flashcard:', err);
-    }
-  };
+
 
   const handleSolvePYQ = async (id: string) => {
     const q = pyqs.find((p) => p.id === id);
@@ -115,7 +97,6 @@ export const FloatingExamCard: React.FC<FloatingExamCardProps> = ({
           {feature === 'formulas' && <Sigma style={{ width: 12, height: 12 }} />}
           {feature === 'revision' && <ScrollText style={{ width: 12, height: 12 }} />}
           {feature === 'search' && <Search style={{ width: 12, height: 12 }} />}
-          {feature === 'flashcards' && <Layers style={{ width: 12, height: 12 }} />}
           {feature === 'frequent' && <BarChart2 style={{ width: 12, height: 12 }} />}
           {feature === 'progress' && <PieChart style={{ width: 12, height: 12 }} />}
           {feature === 'bookmarks' && <BookmarkIcon style={{ width: 12, height: 12 }} />}
@@ -124,7 +105,6 @@ export const FloatingExamCard: React.FC<FloatingExamCardProps> = ({
             {feature === 'formulas' && 'Formula Repository'}
             {feature === 'revision' && 'Quick Revision Notes'}
             {feature === 'search' && 'Exam Search'}
-            {feature === 'flashcards' && 'Exam Flashcards'}
             {feature === 'frequent' && 'Frequently Asked Topics'}
             {feature === 'progress' && 'Progress Chart'}
             {feature === 'bookmarks' && 'Exam Bookmarks'}
@@ -218,15 +198,6 @@ export const FloatingExamCard: React.FC<FloatingExamCardProps> = ({
                 <div key={f.id} style={{ padding: '10px 12px', background: '#1B1B1B', border: '1px solid #242424', borderRadius: 10 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                     <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--anvil-accent)' }}>{f.subject} • {f.topic}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleMakeFormulaFlashcard(f)}
-                      className="anvil-btn-secondary"
-                      style={{ padding: '3px 7px', fontSize: 10 }}
-                    >
-                      <Sparkles style={{ width: 10, height: 10 }} />
-                      <span>{savedFlashcardId === f.id ? 'Card Saved!' : 'Flashcard'}</span>
-                    </button>
                   </div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#F5F5F5', marginBottom: 4 }}>{f.name}</div>
                   <div style={{ padding: '6px 8px', background: '#111111', borderRadius: 6, fontFamily: 'monospace', fontSize: 11, color: 'var(--anvil-accent)', textAlign: 'center', marginBottom: 6, border: '1px solid #242424' }}>
@@ -311,24 +282,7 @@ export const FloatingExamCard: React.FC<FloatingExamCardProps> = ({
         </div>
       )}
 
-      {/* FEATURE 5: FLASHCARDS */}
-      {feature === 'flashcards' && (
-        <div style={{ textAlign: 'center', padding: '16px 0' }}>
-          <Layers style={{ width: 28, height: 28, color: 'var(--anvil-accent)', margin: '0 auto 8px' }} />
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#F5F5F5', marginBottom: 2 }}>Exam Flashcards Deck</div>
-          <p style={{ fontSize: 11, color: '#A7A7A7', marginBottom: 12 }}>
-            Memorize formulas and definitions with active recall.
-          </p>
-          <button
-            type="button"
-            onClick={() => onExpandToSidePanel?.()}
-            className="anvil-btn-primary"
-          >
-            <Layers style={{ width: 11, height: 11 }} />
-            <span>Open Flashcard Review</span>
-          </button>
-        </div>
-      )}
+
 
       {/* FEATURE 6: FREQUENTLY ASKED */}
       {feature === 'frequent' && (

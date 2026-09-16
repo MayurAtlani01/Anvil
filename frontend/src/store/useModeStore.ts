@@ -23,7 +23,7 @@ interface ModeState {
 
 export const useModeStore = create<ModeState>((set, get) => ({
   mode: 'reading',
-  subView: 'summary',
+  subView: 'notes',
   tabContext: {
     url: '',
     title: '',
@@ -33,7 +33,7 @@ export const useModeStore = create<ModeState>((set, get) => ({
   isHydrated: false,
 
   setMode: (mode, subView) => {
-    const defaultSubView = mode === 'reading' ? 'summary' : mode === 'interview' ? 'rounds' : 'pyqs';
+    const defaultSubView = mode === 'reading' ? 'notes' : mode === 'interview' ? 'rounds' : 'pyqs';
     const activeSubView = subView || defaultSubView;
     set({ mode, subView: activeSubView });
     storage.set('anvil_active_mode', { mode, subView: activeSubView });
@@ -56,10 +56,10 @@ export const useModeStore = create<ModeState>((set, get) => ({
     const rawMode = await storage.get<string>('anvil_mode', 'reading');
     const saved = await storage.get<{ mode: Mode; subView: string }>('anvil_active_mode', {
       mode: (rawMode as Mode) || 'reading',
-      subView: rawMode === 'interview' ? 'rounds' : rawMode === 'exam' ? 'pyqs' : 'summary',
+      subView: rawMode === 'interview' ? 'rounds' : rawMode === 'exam' ? 'pyqs' : 'notes',
     });
     const effectiveMode = (rawMode as Mode) || saved.mode || 'reading';
-    const effectiveSubView = saved.subView || (effectiveMode === 'reading' ? 'summary' : effectiveMode === 'interview' ? 'rounds' : 'pyqs');
+    const effectiveSubView = saved.subView || (effectiveMode === 'reading' ? 'notes' : effectiveMode === 'interview' ? 'rounds' : 'pyqs');
     set({ mode: effectiveMode, subView: effectiveSubView, isHydrated: true });
   },
 }));

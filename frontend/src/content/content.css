@@ -29,9 +29,9 @@
   /* Theme Tokens — Default Dark */
   --anvil-accent: #FF6845;
   --anvil-accent-rgb: 255, 104, 69;
-  --anvil-accent-glow: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.35);
-  --anvil-accent-glow-subtle: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.16);
-  --anvil-accent-glow-strong: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.55);
+  --anvil-accent-glow: transparent;
+  --anvil-accent-glow-subtle: transparent;
+  --anvil-accent-glow-strong: transparent;
   --anvil-accent-surface: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.10);
   --anvil-accent-surface-hover: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.18);
   --anvil-accent-border: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.28);
@@ -149,7 +149,7 @@
   background: var(--anvil-accent-surface, rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.12));
   border-color: var(--anvil-accent);
   transform: scale(1.04);
-  box-shadow: 0 0 14px var(--anvil-accent-glow);
+  box-shadow: none;
 }
 
 .anvil-rail-logo:active {
@@ -191,12 +191,12 @@
   transform: scale(0.96);
 }
 
-/* Active Feature State (User Accent + Ambient Glow) */
+/* Active Feature State (User Accent, No Glow) */
 .anvil-rail-btn.anvil-rail-btn-active {
   background: var(--anvil-accent-surface, rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.14));
   border: 1.5px solid var(--anvil-accent);
   color: var(--anvil-accent);
-  box-shadow: 0 0 16px var(--anvil-accent-glow), inset 0 0 8px var(--anvil-accent-surface);
+  box-shadow: none;
 }
 
 .anvil-rail-btn.anvil-rail-btn-active::after {
@@ -210,7 +210,7 @@
   height: 14px;
   background: var(--anvil-accent);
   border-radius: 2px;
-  box-shadow: 0 0 6px var(--anvil-accent);
+  box-shadow: none;
 }
 
 /* Expand Button (Bottom) */
@@ -224,7 +224,7 @@
   background: var(--anvil-accent);
   border-color: var(--anvil-accent);
   color: #FFFFFF;
-  box-shadow: 0 4px 14px var(--anvil-accent-glow);
+  box-shadow: none;
   transform: translateY(-1px);
 }
 
@@ -412,7 +412,7 @@
 
 .anvil-btn-primary:hover {
   opacity: 0.92;
-  box-shadow: 0 2px 8px var(--anvil-accent-glow);
+  box-shadow: none;
 }
 
 .anvil-btn-secondary {
@@ -582,6 +582,20 @@
   color: var(--anvil-text, #F5F5F5);
   font-size: 12px;
   animation: anvilCardFadeIn 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.anvil-reading-contextual-popup {
+  animation: anvilFadeIn 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.anvil-context-btn:hover {
+  background: var(--anvil-card-bg-subtle, #1D1D1D) !important;
+  color: var(--anvil-text, #FFFFFF) !important;
+  transform: translateY(-0.5px);
+}
+
+.anvil-context-btn:active {
+  transform: scale(0.97);
 }
 
 @keyframes anvilFadeIn {

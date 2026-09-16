@@ -1,6 +1,7 @@
 import { InterviewService } from '../api/interview';
 import { DifficultyLevel, InterviewRound, InterviewSession, Question, ResumeAnalysis } from '@/types';
 import { storage } from './storage';
+import { apiFetch } from '../api/apiClient';
 
 const SESSIONS_STORAGE_KEY = 'anvil_interview_sessions_data';
 const RESUME_STORAGE_KEY = 'anvil_resume_analysis_data';
@@ -59,6 +60,11 @@ const MOCK_QUESTION_IDS = new Set([
 
 export class StorageInterviewService implements InterviewService {
   async getRounds(): Promise<InterviewRound[]> {
+    const apiData = await apiFetch<InterviewRound[]>('/api/interview/rounds');
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const questions = await this.getAllQuestions();
     return DEFAULT_INTERVIEW_ROUNDS.map((round) => ({
       ...round,
@@ -73,6 +79,14 @@ export class StorageInterviewService implements InterviewService {
   }
 
   async addQuestion(question: Question): Promise<Question> {
+    const apiData = await apiFetch<Question>('/api/interview/questions', {
+      method: 'POST',
+      body: JSON.stringify(question),
+    });
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const questions = await this.getAllQuestions();
     questions.unshift(question);
     await storage.set(INTERVIEW_QUESTIONS_KEY, questions);
@@ -80,6 +94,16 @@ export class StorageInterviewService implements InterviewService {
   }
 
   async getQuestionsForRound(roundId?: string, difficulty?: DifficultyLevel): Promise<Question[]> {
+    const params = new URLSearchParams();
+    if (roundId) params.append('roundId', roundId);
+    if (difficulty) params.append('difficulty', difficulty);
+
+    const queryStr = params.toString() ? `?${params.toString()}` : '';
+    const apiData = await apiFetch<Question[]>(`/api/interview/questions${queryStr}`);
+    if (apiData !== null) {
+      return apiData;
+    }
+
     let questions = await this.getAllQuestions();
     const round = DEFAULT_INTERVIEW_ROUNDS.find((r) => r.id === roundId);
 
@@ -93,6 +117,14 @@ export class StorageInterviewService implements InterviewService {
   }
 
   async startSession(roundId: string, difficulty?: DifficultyLevel): Promise<InterviewSession> {
+    const apiData = await apiFetch<InterviewSession>('/api/interview/sessions', {
+      method: 'POST',
+      body: JSON.stringify({ roundId, difficulty }),
+    });
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const round = DEFAULT_INTERVIEW_ROUNDS.find((r) => r.id === roundId) || DEFAULT_INTERVIEW_ROUNDS[0];
     let questions = await this.getQuestionsForRound(round.id, difficulty);
 
@@ -101,7 +133,6 @@ export class StorageInterviewService implements InterviewService {
     }
 
     if (questions.length === 0) {
-      // Provide an interactive live question so user can practice even before saving questions
       questions = [
         {
           id: `q-live-${Date.now()}`,
@@ -135,13 +166,20 @@ export class StorageInterviewService implements InterviewService {
   }
 
   async submitAnswer(sessionId: string, questionId: string, answerText: string): Promise<InterviewSession> {
+    const apiData = await apiFetch<InterviewSession>(`/api/interview/sessions/${sessionId}/answer`, {
+      method: 'POST',
+      body: JSON.stringify({ questionId, answerText }),
+    });
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const sessions = await this.getSessionHistory();
     const session = sessions.find((s) => s.id === sessionId);
     if (!session) throw new Error(`Session ${sessionId} not found`);
 
     const existingAnswerIdx = session.answers.findIndex((a) => a.questionId === questionId);
-    
-    // Simulate high-yield instant AI evaluation feedback
+
     const wordCount = answerText.trim().split(/\s+/).length;
     const feedbackScore = Math.min(96, Math.max(65, 70 + Math.floor(wordCount * 1.5)));
     const feedback = {
@@ -177,6 +215,13 @@ export class StorageInterviewService implements InterviewService {
   }
 
   async finishSession(sessionId: string): Promise<InterviewSession> {
+    const apiData = await apiFetch<InterviewSession>(`/api/interview/sessions/${sessionId}/finish`, {
+      method: 'POST',
+    });
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const sessions = await this.getSessionHistory();
     const session = sessions.find((s) => s.id === sessionId);
     if (!session) throw new Error(`Session ${sessionId} not found`);
@@ -184,9 +229,10 @@ export class StorageInterviewService implements InterviewService {
     session.status = 'completed';
     session.endTime = new Date().toISOString();
 
-    const totalScore = session.answers.length > 0
-      ? Math.round(session.answers.reduce((acc, a) => acc + (a.feedback?.score || 75), 0) / session.answers.length)
-      : 85;
+    const totalScore =
+      session.answers.length > 0
+        ? Math.round(session.answers.reduce((acc, a) => acc + (a.feedback?.score || 75), 0) / session.answers.length)
+        : 85;
 
     session.overallFeedback = {
       totalScore,
@@ -207,17 +253,35 @@ export class StorageInterviewService implements InterviewService {
   }
 
   async getSession(sessionId: string): Promise<InterviewSession | null> {
+    const apiData = await apiFetch<InterviewSession>(`/api/interview/sessions/${sessionId}`);
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const sessions = await this.getSessionHistory();
     return sessions.find((s) => s.id === sessionId) || null;
   }
 
   async getSessionHistory(): Promise<InterviewSession[]> {
+    const apiData = await apiFetch<InterviewSession[]>('/api/interview/sessions');
+    if (apiData !== null) {
+      return apiData;
+    }
+
     let sessions = await storage.get<InterviewSession[]>(SESSIONS_STORAGE_KEY, []);
     if (!sessions) sessions = [];
     return sessions.filter((s) => s.id !== 'session-seed-1');
   }
 
   async analyzeResume(fileName: string, fileContent: string): Promise<ResumeAnalysis> {
+    const apiData = await apiFetch<ResumeAnalysis>('/api/interview/resume/analyze', {
+      method: 'POST',
+      body: JSON.stringify({ fileName, fileContent }),
+    });
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const analysis: ResumeAnalysis = {
       id: `resume-${Date.now()}`,
       fileName: fileName || 'Candidate_Resume.pdf',
@@ -259,6 +323,11 @@ export class StorageInterviewService implements InterviewService {
   }
 
   async getLastResumeAnalysis(): Promise<ResumeAnalysis | null> {
+    const apiData = await apiFetch<ResumeAnalysis>('/api/interview/resume/latest');
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const resume = await storage.get<ResumeAnalysis | null>(RESUME_STORAGE_KEY, null);
     if (resume && (resume.id === 'resume-demo-01' || resume.id === 'resume-mock-01')) {
       return null;

@@ -1,8 +1,6 @@
 import React from 'react';
 import { BookOpen, Briefcase, GraduationCap, X, ArrowRight } from 'lucide-react';
 
-import { getAccentGlow } from '@/utils/color';
-
 export type ActiveMode = 'reading' | 'interview' | 'exam';
 
 interface ModeSwitchToastProps {
@@ -23,7 +21,7 @@ const MODE_CONFIGS: Record<
 > = {
   reading: {
     title: 'Reading Mode',
-    description: 'AI Summary, Smart Read Aloud & Meaning Lookup',
+    description: 'Flashcards, Smart Read Aloud & Meaning Lookup',
     icon: BookOpen,
     defaultAccentColor: '#FF6845',
   },
@@ -53,7 +51,6 @@ export const ModeSwitchToast: React.FC<ModeSwitchToastProps> = ({
 
   // Use user's chosen accent color if in reading mode or if provided
   const effectiveAccent = mode === 'reading' && accentColor ? accentColor : currentConfig.defaultAccentColor;
-  const effectiveGlow = getAccentGlow(effectiveAccent, 0.28);
 
   return (
     <div
@@ -61,7 +58,7 @@ export const ModeSwitchToast: React.FC<ModeSwitchToastProps> = ({
       role="status"
       aria-live="polite"
       style={{
-        boxShadow: `0 16px 40px -4px rgba(0, 0, 0, 0.8), 0 0 20px -2px ${effectiveGlow}`,
+        boxShadow: '0 16px 40px -4px rgba(0, 0, 0, 0.8)',
         borderColor: 'rgba(255, 255, 255, 0.12)',
       }}
       onClick={(e) => e.stopPropagation()}
@@ -80,7 +77,7 @@ export const ModeSwitchToast: React.FC<ModeSwitchToastProps> = ({
             className="anvil-mode-toast-dot"
             style={{
               backgroundColor: effectiveAccent,
-              boxShadow: `0 0 6px ${effectiveAccent}`,
+              boxShadow: 'none',
             }}
           />
           MODE SWITCHED

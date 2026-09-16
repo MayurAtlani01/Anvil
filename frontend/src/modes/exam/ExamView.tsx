@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, BookOpen, Calculator, FileCheck, Sparkles, TrendingUp, Plus, ExternalLink } from 'lucide-react';
+import { Search, BookOpen, Calculator, FileCheck, TrendingUp, Plus, ExternalLink } from 'lucide-react';
 import { useExamStore } from '@/store/useExamStore';
-import { useFlashcardsStore } from '@/store/useFlashcardsStore';
 import { useToastStore } from '@/store/useToastStore';
 import { QuestionCard } from '@/components/QuestionCard';
 import { DifficultySelector } from '@/components/DifficultySelector';
@@ -28,27 +27,12 @@ export const ExamView: React.FC = () => {
     solvePYQ,
   } = useExamStore();
 
-  const { createFlashcard } = useFlashcardsStore();
   const { addToast } = useToastStore();
   const [activeTab, setActiveTab] = useState<'pyqs' | 'formulas' | 'revision' | 'radar'>('pyqs');
 
   useEffect(() => {
     loadExamData();
   }, [loadExamData]);
-
-  const handleMakeFormulaFlashcard = async (f: typeof formulas[0]) => {
-    await createFlashcard({
-      front: `Formula: ${f.name} (${f.subject})`,
-      back: `${f.formula}\n\nExplanation: ${f.explanation}\n\nExample:\n${f.example}`,
-      sourceMode: 'exam',
-      contentType: 'formula',
-      difficulty: f.difficulty || 'medium',
-    });
-    addToast({
-      type: 'success',
-      message: `Created flashcard for formula: ${f.name}`,
-    });
-  };
 
   return (
     <div className="space-y-3.5 animate-fade-in text-zinc-900 dark:text-zinc-100">
@@ -162,14 +146,6 @@ export const ExamView: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleMakeFormulaFlashcard(f)}
-                        title="Turn into Flashcard"
-                        className="p-1 rounded text-zinc-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                      </button>
                       <BookmarkButton
                         contentId={f.id}
                         url={`anvil://exam/formula/${f.id}`}

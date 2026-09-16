@@ -4,7 +4,6 @@ import {
   Sigma,
   ScrollText,
   Search,
-  Layers,
   BarChart2,
   PieChart,
   Bookmark,
@@ -17,7 +16,6 @@ export type ExamFeatureId =
   | 'formulas'
   | 'revision'
   | 'search'
-  | 'flashcards'
   | 'frequent'
   | 'progress'
   | 'bookmarks';
@@ -53,12 +51,6 @@ const FEATURES: FeatureItem[] = [
     label: 'Search',
     subtitle: 'Search questions & formulas',
     icon: Search,
-  },
-  {
-    id: 'flashcards',
-    label: 'Flashcards',
-    subtitle: 'Review exam deck',
-    icon: Layers,
   },
   {
     id: 'frequent',

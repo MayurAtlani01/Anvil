@@ -33,7 +33,7 @@ export const ReadingView: React.FC = () => {
   const { toggleBookmark, isBookmarked } = useBookmarksStore();
   const { addToast } = useToastStore();
 
-  const [activeTab, setActiveTab] = useState<'summary' | 'notes' | 'explanation'>('summary');
+  const [activeTab, setActiveTab] = useState<'notes' | 'explanation'>('notes');
   const [showSpeedControls, setShowSpeedControls] = useState(false);
 
   const bookmarked = isBookmarked(pageUrl);
@@ -55,20 +55,6 @@ export const ReadingView: React.FC = () => {
     addToast({
       type: isNowBookmarked ? 'success' : 'info',
       message: isNowBookmarked ? 'Article bookmarked' : 'Bookmark removed',
-    });
-  };
-
-  const handleGenerateFlashcardFromSummary = async () => {
-    if (!summary) return;
-    await createFlashcard({
-      front: `Summary: ${pageTitle || 'Study Article'}`,
-      back: `${summary.summary}\n\nKey Takeaways:\n${summary.bulletPoints.map((b) => `• ${b}`).join('\n')}`,
-      sourceMode: 'reading',
-      contentType: 'article',
-    });
-    addToast({
-      type: 'success',
-      message: 'Created flashcard from article summary',
     });
   };
 
@@ -185,7 +171,6 @@ export const ReadingView: React.FC = () => {
       {/* Sub navigation filters */}
       <Filters
         options={[
-          { id: 'summary', label: 'AI Summary' },
           { id: 'notes', label: 'Page Notes' },
           ...(aiExplanation ? [{ id: 'explanation', label: 'Selection Explanation' }] : []),
         ]}
@@ -216,61 +201,6 @@ export const ReadingView: React.FC = () => {
               },
             }}
           />
-        </div>
-      )}
-
-      {/* View: AI Summary */}
-      {activeTab === 'summary' && (
-        <div className="space-y-3">
-          {summary ? (
-            <AIResponse
-              title={`Key Takeaways (${summary.readTimeMin} min read)`}
-              badgeText="Article Synthesized"
-              summaryText={summary.summary}
-              bulletPoints={summary.bulletPoints}
-              relatedConcepts={summary.keyEntities}
-              onAction={{
-                label: 'Turn Summary into Flashcard',
-                onClick: handleGenerateFlashcardFromSummary,
-              }}
-            />
-          ) : (
-            <div className="p-4 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-center space-y-2.5">
-              <div className="w-8 h-8 rounded-full bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 flex items-center justify-center mx-auto">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                  Article Summary
-                </h4>
-                <p className="text-2xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  Generate synthesized takeaways, core concepts, and key terms from this page.
-                </p>
-              </div>
-
-              {summaryError && (
-                <div className="p-2.5 rounded bg-zinc-50 dark:bg-zinc-850 border border-zinc-200 dark:border-zinc-800 text-2xs text-zinc-600 dark:text-zinc-400 text-left flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-semibold text-zinc-800 dark:text-zinc-200 block">
-                      Backend AI Service Note:
-                    </span>
-                    <span>{summaryError}</span>
-                  </div>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={generateSummary}
-                disabled={isSummarizing || !pageText.trim()}
-                className="px-3.5 py-1.5 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-50 rounded-md shadow-subtle inline-flex items-center gap-1.5 transition-colors"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                {isSummarizing ? 'Synthesizing article...' : 'Generate AI Summary'}
-              </button>
-            </div>
-          )}
         </div>
       )}
 

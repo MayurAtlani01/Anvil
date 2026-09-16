@@ -1,6 +1,7 @@
 import { ExamService, FormulaFilter, PyqFilter } from '../api/exam';
 import { Formula, Question, RevisionNote } from '@/types';
 import { storage } from './storage';
+import { apiFetch } from '../api/apiClient';
 
 const EXAM_PYQS_KEY = 'anvil_exam_pyqs_data';
 const EXAM_FORMULAS_KEY = 'anvil_exam_formulas_data';
@@ -16,6 +17,19 @@ const MOCK_EXAM_REVISION_IDS = new Set(['note-os-sync', 'note-db-acid', 'note-di
 
 export class StorageExamService implements ExamService {
   async getPYQs(filter?: PyqFilter): Promise<Question[]> {
+    const params = new URLSearchParams();
+    if (filter?.subject) params.append('subject', filter.subject);
+    if (filter?.topic) params.append('topic', filter.topic);
+    if (filter?.year) params.append('year', String(filter.year));
+    if (filter?.difficulty) params.append('difficulty', filter.difficulty);
+    if (filter?.search) params.append('search', filter.search);
+
+    const queryStr = params.toString() ? `?${params.toString()}` : '';
+    const apiData = await apiFetch<Question[]>(`/api/exam/pyqs${queryStr}`);
+    if (apiData !== null) {
+      return apiData;
+    }
+
     let pyqs = await storage.get<Question[]>(EXAM_PYQS_KEY, []);
     if (!pyqs) pyqs = [];
     pyqs = pyqs.filter((q) => !MOCK_EXAM_PYQ_IDS.has(q.id));
@@ -47,11 +61,23 @@ export class StorageExamService implements ExamService {
   }
 
   async getPYQ(id: string): Promise<Question | null> {
+    const apiData = await apiFetch<Question>(`/api/exam/pyqs/${id}`);
+    if (apiData !== null) {
+      return apiData;
+    }
     const pyqs = await this.getPYQs();
     return pyqs.find((q) => q.id === id) || null;
   }
 
   async addPYQ(pyq: Question): Promise<Question> {
+    const apiData = await apiFetch<Question>('/api/exam/pyqs', {
+      method: 'POST',
+      body: JSON.stringify(pyq),
+    });
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const pyqs = await this.getPYQs();
     pyqs.unshift(pyq);
     await storage.set(EXAM_PYQS_KEY, pyqs);
@@ -59,6 +85,17 @@ export class StorageExamService implements ExamService {
   }
 
   async getFormulas(filter?: FormulaFilter): Promise<Formula[]> {
+    const params = new URLSearchParams();
+    if (filter?.subject) params.append('subject', filter.subject);
+    if (filter?.topic) params.append('topic', filter.topic);
+    if (filter?.search) params.append('search', filter.search);
+
+    const queryStr = params.toString() ? `?${params.toString()}` : '';
+    const apiData = await apiFetch<Formula[]>(`/api/exam/formulas${queryStr}`);
+    if (apiData !== null) {
+      return apiData;
+    }
+
     let formulas = await storage.get<Formula[]>(EXAM_FORMULAS_KEY, []);
     if (!formulas) formulas = [];
     formulas = formulas.filter((f) => !MOCK_EXAM_FORMULA_IDS.has(f.id));
@@ -84,6 +121,14 @@ export class StorageExamService implements ExamService {
   }
 
   async addFormula(formula: Formula): Promise<Formula> {
+    const apiData = await apiFetch<Formula>('/api/exam/formulas', {
+      method: 'POST',
+      body: JSON.stringify(formula),
+    });
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const formulas = await this.getFormulas();
     formulas.unshift(formula);
     await storage.set(EXAM_FORMULAS_KEY, formulas);
@@ -91,6 +136,16 @@ export class StorageExamService implements ExamService {
   }
 
   async getRevisionNotes(subject?: string, topic?: string): Promise<RevisionNote[]> {
+    const params = new URLSearchParams();
+    if (subject) params.append('subject', subject);
+    if (topic) params.append('topic', topic);
+
+    const queryStr = params.toString() ? `?${params.toString()}` : '';
+    const apiData = await apiFetch<RevisionNote[]>(`/api/exam/revision-notes${queryStr}`);
+    if (apiData !== null) {
+      return apiData;
+    }
+
     let notes = await storage.get<RevisionNote[]>(EXAM_REVISION_NOTES_KEY, []);
     if (!notes) notes = [];
     notes = notes.filter((n) => !MOCK_EXAM_REVISION_IDS.has(n.id));
@@ -105,6 +160,14 @@ export class StorageExamService implements ExamService {
   }
 
   async addRevisionNote(note: RevisionNote): Promise<RevisionNote> {
+    const apiData = await apiFetch<RevisionNote>('/api/exam/revision-notes', {
+      method: 'POST',
+      body: JSON.stringify(note),
+    });
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const notes = await this.getRevisionNotes();
     notes.unshift(note);
     await storage.set(EXAM_REVISION_NOTES_KEY, notes);
@@ -112,6 +175,11 @@ export class StorageExamService implements ExamService {
   }
 
   async getSubjects(): Promise<string[]> {
+    const apiData = await apiFetch<string[]>('/api/exam/subjects');
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const pyqs = await this.getPYQs();
     const formulas = await this.getFormulas();
     const subjects = new Set<string>();
@@ -121,6 +189,12 @@ export class StorageExamService implements ExamService {
   }
 
   async getTopics(subject?: string): Promise<string[]> {
+    const query = subject ? `?subject=${encodeURIComponent(subject)}` : '';
+    const apiData = await apiFetch<string[]>(`/api/exam/topics${query}`);
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const pyqs = await this.getPYQs();
     const formulas = await this.getFormulas();
     const topics = new Set<string>();
@@ -138,6 +212,13 @@ export class StorageExamService implements ExamService {
   }
 
   async getFrequentlyAskedTopics(): Promise<Array<{ topic: string; subject: string; count: number; weight: number }>> {
+    const apiData = await apiFetch<Array<{ topic: string; subject: string; count: number; weight: number }>>(
+      '/api/exam/frequently-asked-topics'
+    );
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const pyqs = await this.getPYQs();
     const topicCounts = new Map<string, { subject: string; count: number }>();
 

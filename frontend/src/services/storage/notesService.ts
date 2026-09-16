@@ -1,6 +1,7 @@
 import { CreateNoteInput, NotesService } from '../api/notes';
 import { Note } from '@/types';
 import { storage } from './storage';
+import { apiFetch } from '../api/apiClient';
 
 const NOTES_STORAGE_KEY = 'anvil_notes_data';
 
@@ -16,6 +17,12 @@ export class StorageNotesService implements NotesService {
   }
 
   async list(url?: string): Promise<Note[]> {
+    const query = url ? `?url=${encodeURIComponent(url)}` : '';
+    const apiData = await apiFetch<Note[]>(`/api/notes${query}`);
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const notes = await this.getStoredNotes();
     if (url) {
       const cleanUrl = url.split('#')[0].split('?')[0];
@@ -25,11 +32,23 @@ export class StorageNotesService implements NotesService {
   }
 
   async get(id: string): Promise<Note | null> {
+    const apiData = await apiFetch<Note>(`/api/notes/${id}`);
+    if (apiData !== null) {
+      return apiData;
+    }
     const notes = await this.getStoredNotes();
     return notes.find((n) => n.id === id) || null;
   }
 
   async create(input: CreateNoteInput): Promise<Note> {
+    const apiData = await apiFetch<Note>('/api/notes', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const notes = await this.getStoredNotes();
     const newNote: Note = {
       id: `note-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -49,6 +68,14 @@ export class StorageNotesService implements NotesService {
   }
 
   async update(id: string, patch: Partial<Note>): Promise<Note> {
+    const apiData = await apiFetch<Note>(`/api/notes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(patch),
+    });
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const notes = await this.getStoredNotes();
     const index = notes.findIndex((n) => n.id === id);
     if (index === -1) {
@@ -66,12 +93,18 @@ export class StorageNotesService implements NotesService {
   }
 
   async remove(id: string): Promise<void> {
+    await apiFetch(`/api/notes/${id}`, { method: 'DELETE' });
     const notes = await this.getStoredNotes();
     const filtered = notes.filter((n) => n.id !== id);
     await this.saveNotes(filtered);
   }
 
   async search(query: string): Promise<Note[]> {
+    const apiData = await apiFetch<Note[]>(`/api/notes/search?q=${encodeURIComponent(query)}`);
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const notes = await this.getStoredNotes();
     const q = query.toLowerCase().trim();
     if (!q) return notes;

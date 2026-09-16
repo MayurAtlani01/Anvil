@@ -7,9 +7,9 @@
     --brand-primary: #FF6845;
     --anvil-accent: #FF6845;
     --anvil-accent-rgb: 255, 104, 69;
-    --anvil-accent-glow: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.35);
-    --anvil-accent-glow-subtle: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.16);
-    --anvil-accent-glow-strong: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.55);
+    --anvil-accent-glow: transparent;
+    --anvil-accent-glow-subtle: transparent;
+    --anvil-accent-glow-strong: transparent;
     --anvil-accent-surface: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.10);
     --anvil-accent-surface-hover: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.18);
     --anvil-accent-border: rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.28);

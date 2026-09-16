@@ -388,5 +388,45 @@ chrome.runtime.onMessage.addListener((message: AnvilMessage, sender, sendRespons
     }
   }
 
+  if ((message as any).type === 'FORWARD_API_REQUEST') {
+    const { path, options } = message as any;
+    (async () => {
+      try {
+        const cfg = await chrome.storage.local.get(['anvil_api_config', 'anvil_auth_token']);
+        const config = cfg.anvil_api_config || {};
+        const token = cfg.anvil_auth_token || '';
+        const baseUrl = (config.backendUrl && config.backendUrl.trim())
+          ? config.backendUrl.trim().replace(/\/+$/, '')
+          : 'http://127.0.0.1:8000';
+        const cleanPath = path.startsWith('/') ? path : `/${path}`;
+        const url = `${baseUrl}${cleanPath}`;
+        const authHeader = token ? `Bearer ${token}` : (config.apiKey ? `Bearer ${config.apiKey}` : '');
+        const headers = {
+          'Content-Type': 'application/json',
+          ...(authHeader ? { Authorization: authHeader } : {}),
+          ...((options?.headers) || {}),
+        };
+        const resp = await fetch(url, {
+          ...(options || {}),
+          headers,
+        });
+        if (resp.status === 204) {
+          sendResponse({ success: true, data: null });
+          return;
+        }
+        if (!resp.ok) {
+          const errText = await resp.text().catch(() => '');
+          sendResponse({ success: false, error: `API ${resp.status}: ${errText}` });
+          return;
+        }
+        const data = await resp.json();
+        sendResponse({ success: true, data });
+      } catch (err: any) {
+        sendResponse({ success: false, error: err?.message || 'Network error' });
+      }
+    })();
+    return true; // async response
+  }
+
   return false;
 });

@@ -1,6 +1,7 @@
 import { ProgressService } from '../api/progress';
 import { ProgressEntry, ProgressStats } from '@/types';
 import { storage } from './storage';
+import { apiFetch } from '../api/apiClient';
 
 const PROGRESS_STORAGE_KEY = 'anvil_progress_data';
 
@@ -19,10 +20,22 @@ const INITIAL_PROGRESS_STATS: ProgressStats = {
 
 export class StorageProgressService implements ProgressService {
   async getStats(): Promise<ProgressStats> {
+    const apiData = await apiFetch<ProgressStats>('/api/progress/stats');
+    if (apiData !== null) {
+      return apiData;
+    }
     return await storage.get<ProgressStats>(PROGRESS_STORAGE_KEY, INITIAL_PROGRESS_STATS);
   }
 
   async recordActivity(entry: Omit<ProgressEntry, 'id' | 'date'>): Promise<ProgressEntry> {
+    const apiData = await apiFetch<ProgressEntry>('/api/progress/activity', {
+      method: 'POST',
+      body: JSON.stringify(entry),
+    });
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const stats = await this.getStats();
     const newEntry: ProgressEntry = {
       ...entry,
@@ -69,6 +82,7 @@ export class StorageProgressService implements ProgressService {
   }
 
   async resetStats(): Promise<void> {
+    await apiFetch('/api/progress/reset', { method: 'POST' });
     await storage.set(PROGRESS_STORAGE_KEY, INITIAL_PROGRESS_STATS);
   }
 }

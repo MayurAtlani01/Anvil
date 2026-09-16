@@ -1,25 +1,79 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
-import { SelectionToolbar } from './SelectionToolbar';
-import { HoverMeaningPopover } from './HoverMeaningPopover';
-import { ReadingHoverOverlay } from './ReadingHoverOverlay';
+import { ReadingContextualPopup, PopupSubView } from './ReadingContextualPopup';
 import { ReadingCollapsedRail, CollapsedFeatureId } from './ReadingCollapsedRail';
 import { InterviewCollapsedRail, InterviewFeatureId } from './InterviewCollapsedRail';
 import { ExamCollapsedRail, ExamFeatureId } from './ExamCollapsedRail';
-import { FloatingSummaryCard } from './FloatingSummaryCard';
 import { FloatingAudioPlayer } from './FloatingAudioPlayer';
 import { FloatingFlashcardCreator } from './FloatingFlashcardCreator';
 import { FloatingInterviewCard } from './FloatingInterviewCard';
 import { FloatingExamCard } from './FloatingExamCard';
 import { ModeSwitchToast, ActiveMode } from './ModeSwitchToast';
-import { AnvilAction, SelectionPayload } from '@/messaging/types';
-import { sendRuntimeMessage, onRuntimeMessage } from '@/messaging/helpers';
-import { annotationsService, aiService, notesService } from '@/services';
-import { Annotation, DictionaryEntry, TranslationResult } from '@/types';
-import { getAccentStyles, getAccentGlow, getAccentSurface } from '@/utils/color';
+import { onRuntimeMessage } from '@/messaging/helpers';
+import { annotationsService } from '@/services';
+import { getAccentStyles, getAccentSurface } from '@/utils/color';
 import contentStyles from './content.css?inline';
 
 const SHADOW_HOST_ID = 'anvil-learning-shadow-root';
+
+export interface ReadingTarget {
+  text: string;
+  rect: {
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+    bottom: number;
+    right: number;
+  };
+  range?: Range;
+  isSelection: boolean;
+}
+
+function highlightTextFallback(text: string, bgColor: string, borderColor: string): boolean {
+  if (!text || text.length < 2) return false;
+  const target = text.trim();
+  const walker = document.createTreeWalker(
+    document.body,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: (node) => {
+        if (!node.nodeValue || !node.nodeValue.includes(target)) {
+          return NodeFilter.FILTER_SKIP;
+        }
+        const parent = node.parentElement;
+        if (!parent || parent.closest('#anvil-learning-shadow-root') || parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE') {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    }
+  );
+
+  const node = walker.nextNode();
+  if (node && node.nodeValue) {
+    const idx = node.nodeValue.indexOf(target);
+    if (idx !== -1) {
+      try {
+        const range = document.createRange();
+        range.setStart(node, idx);
+        range.setEnd(node, idx + target.length);
+        const span = document.createElement('mark');
+        span.className = 'anvil-page-highlight';
+        span.style.backgroundColor = bgColor;
+        span.style.borderRadius = '3px';
+        span.style.padding = '1px 3px';
+        span.style.color = 'inherit';
+        span.style.borderBottom = `1.5px solid ${borderColor}`;
+        range.surroundContents(span);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  }
+  return false;
+}
 
 function ContentApp() {
   const [activeMode, setActiveMode] = useState<ActiveMode | null>('reading');
@@ -39,11 +93,6 @@ function ContentApp() {
   } | null>(null);
   const toastTimerRef = useRef<number | null>(null);
 
-  const [selection, setSelection] = useState<SelectionPayload | null>(null);
-  const [hoverPosition, setHoverPosition] = useState<{ x: number; y: number } | null>(null);
-  const [dictionaryEntry, setDictionaryEntry] = useState<DictionaryEntry | null>(null);
-  const [translationResult, setTranslationResult] = useState<TranslationResult | null>(null);
-  const [isReadingHoverActive, setIsReadingHoverActive] = useState<boolean>(true);
   const [readingFocus, setReadingFocus] = useState<boolean>(true);
 
   // Audio / Speech Synthesis state
@@ -55,12 +104,18 @@ function ContentApp() {
   const [flashcardText, setFlashcardText] = useState<string>('');
   const [showFlashcardModal, setShowFlashcardModal] = useState<boolean>(false);
 
-  // Meaning mode hover lookup debounce
-  const meaningTimerRef = useRef<number | null>(null);
-  const lastLookupWordRef = useRef<string>('');
-
   // Single active state for reading webpage interaction layer
   const isReadingLayerActive = activeMode === 'reading' && readingFocus;
+
+  // Reading Focus Hover & Selection Contextual Popup state
+  const [readingTarget, setReadingTarget] = useState<ReadingTarget | null>(null);
+  const [popupSubView, setPopupSubView] = useState<PopupSubView>('meaning');
+  const popupSubViewRef = useRef<PopupSubView>('meaning');
+  const currentTargetTextRef = useRef<string>('');
+
+  useEffect(() => {
+    popupSubViewRef.current = popupSubView;
+  }, [popupSubView]);
 
   // Keep shadow host in sync with active theme and accent color
   useEffect(() => {
@@ -87,6 +142,7 @@ function ContentApp() {
         'anvil_theme',
         'anvil_accent_color',
         'anvil_sidepanel_open',
+        'anvil_active_reading_feature',
       ], (res) => {
         if (res.anvil_mode) {
           setActiveMode(res.anvil_mode as 'reading' | 'interview' | 'exam');
@@ -95,9 +151,10 @@ function ContentApp() {
         } else {
           setActiveMode('reading');
         }
-        if (res.anvil_reading_hover !== undefined) {
-          setIsReadingHoverActive(Boolean(res.anvil_reading_hover));
+        if (res.anvil_active_reading_feature !== undefined) {
+          setActiveReadingFeature(res.anvil_active_reading_feature || null);
         }
+
         if (res.anvil_reading_focus !== undefined) {
           setReadingFocus(Boolean(res.anvil_reading_focus));
         }
@@ -149,9 +206,7 @@ function ContentApp() {
             setActiveMode('reading');
           }
         }
-        if (changes.anvil_reading_hover !== undefined) {
-          setIsReadingHoverActive(Boolean(changes.anvil_reading_hover.newValue));
-        }
+
         if (changes.anvil_reading_focus !== undefined) {
           setReadingFocus(Boolean(changes.anvil_reading_focus.newValue));
         }
@@ -163,6 +218,9 @@ function ContentApp() {
         }
         if (changes.anvil_sidepanel_open !== undefined) {
           setIsSidePanelOpen(Boolean(changes.anvil_sidepanel_open.newValue));
+        }
+        if (changes.anvil_active_reading_feature !== undefined) {
+          setActiveReadingFeature((changes.anvil_active_reading_feature.newValue as CollapsedFeatureId) || null);
         }
       };
 
@@ -213,7 +271,8 @@ function ContentApp() {
         sendResponse({ success: true });
         return true;
       } else if (message.type === 'SET_READING_HOVER_MODE') {
-        setIsReadingHoverActive(message.enabled);
+        sendResponse({ success: true });
+        return true;
       } else if (message.type === 'SET_READING_FOCUS') {
         setReadingFocus(Boolean(message.enabled));
         sendResponse({ success: true });
@@ -232,10 +291,8 @@ function ContentApp() {
   // Teardown reading interaction overlays & speech when Reading Focus is OFF or mode is not reading
   useEffect(() => {
     if (!isReadingLayerActive) {
-      setSelection(null);
-      setHoverPosition(null);
-      setDictionaryEntry(null);
-      setTranslationResult(null);
+      setReadingTarget(null);
+      currentTargetTextRef.current = '';
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         setIsSpeaking(false);
@@ -243,88 +300,7 @@ function ContentApp() {
     }
   }, [isReadingLayerActive]);
 
-  // Meaning Mode: Word detection on hover
-  useEffect(() => {
-    if (!isReadingLayerActive || activeReadingFeature !== 'meaning') {
-      return;
-    }
 
-    const getWordAtPoint = (x: number, y: number): { word: string; range: Range } | null => {
-      let range: Range | null = null;
-      let textNode: Node | null = null;
-      let offset = 0;
-
-      if (document.caretRangeFromPoint) {
-        range = document.caretRangeFromPoint(x, y);
-        if (range) {
-          textNode = range.startContainer;
-          offset = range.startOffset;
-        }
-      } else if ((document as any).caretPositionFromPoint) {
-        const pos = (document as any).caretPositionFromPoint(x, y);
-        if (pos) {
-          textNode = pos.offsetNode;
-          offset = pos.offset;
-        }
-      }
-
-      if (!textNode || textNode.nodeType !== Node.TEXT_NODE) return null;
-
-      const data = textNode.nodeValue || '';
-      if (!data) return null;
-
-      // Expand left & right to find word boundaries
-      let start = offset;
-      while (start > 0 && /\w/.test(data[start - 1])) {
-        start--;
-      }
-
-      let end = offset;
-      while (end < data.length && /\w/.test(data[end])) {
-        end++;
-      }
-
-      const word = data.slice(start, end).trim();
-      if (word.length < 3 || !/^[a-zA-Z]+$/.test(word)) return null;
-
-      try {
-        const wordRange = document.createRange();
-        wordRange.setStart(textNode, start);
-        wordRange.setEnd(textNode, end);
-        return { word, range: wordRange };
-      } catch {
-        return null;
-      }
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (meaningTimerRef.current) {
-        clearTimeout(meaningTimerRef.current);
-      }
-
-      meaningTimerRef.current = window.setTimeout(async () => {
-        const res = getWordAtPoint(e.clientX, e.clientY);
-        if (res && res.word.toLowerCase() !== lastLookupWordRef.current.toLowerCase()) {
-          lastLookupWordRef.current = res.word;
-          const entry = await aiService.defineWord(res.word);
-          if (entry) {
-            setDictionaryEntry(entry);
-            setTranslationResult(null);
-            setHoverPosition({ x: e.clientX, y: e.clientY });
-          }
-        }
-      }, 350);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove, { passive: true });
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      if (meaningTimerRef.current) {
-        clearTimeout(meaningTimerRef.current);
-      }
-    };
-  }, [isReadingLayerActive, activeReadingFeature]);
 
   // Read Aloud Mode: Click on paragraph to read
   useEffect(() => {
@@ -348,156 +324,193 @@ function ContentApp() {
     };
   }, [isReadingLayerActive, activeReadingFeature]);
 
-  // Global Selection Detection — strictly active ONLY when isReadingLayerActive is true
+  // Reading Focus: Text Selection Action Trigger
+  // Strictly triggers ONLY on mouseup after user deliberately selects a word or text
+  // ZERO hover popups. ZERO interruption while user is dragging or selecting text.
   useEffect(() => {
-    if (!isReadingLayerActive) {
+    if (!isReadingLayerActive || !activeReadingFeature) {
+      setReadingTarget(null);
+      currentTargetTextRef.current = '';
       return;
     }
 
-    const handleMouseUp = () => {
-      setTimeout(() => {
+    const isSelectingRef = { current: false };
+    let selectionTimeout: number | null = null;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest(`#${SHADOW_HOST_ID}`)) {
+        return;
+      }
+      if (selectionTimeout) {
+        clearTimeout(selectionTimeout);
+        selectionTimeout = null;
+      }
+      isSelectingRef.current = true;
+      // Starting a new selection or clicking outside immediately dismisses existing popups
+      setReadingTarget(null);
+      currentTargetTextRef.current = '';
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      isSelectingRef.current = false;
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest(`#${SHADOW_HOST_ID}`)) {
+        return;
+      }
+
+      if (selectionTimeout) {
+        clearTimeout(selectionTimeout);
+      }
+
+      // 100ms debounce ensures selection is completed and prevents interfering with clicks
+      selectionTimeout = window.setTimeout(() => {
+        if (isSelectingRef.current) return;
+
         const sel = window.getSelection();
-        if (!sel || sel.isCollapsed || !sel.toString().trim()) {
-          setSelection(null);
+        if (!sel || sel.isCollapsed || !sel.rangeCount) {
           return;
         }
 
         const text = sel.toString().trim();
-        if (text.length < 2) {
-          setSelection(null);
+        // Must contain alphanumeric characters (not just spaces or symbols)
+        if (!text || !/\w/.test(text)) {
           return;
         }
 
         try {
           const range = sel.getRangeAt(0);
-          const rect = range.getBoundingClientRect();
+          const r = range.getBoundingClientRect();
+          if (r.width === 0 && r.height === 0) return;
 
-          setSelection({
-            text,
-            rect: {
-              top: rect.top,
-              left: rect.left,
-              width: rect.width,
-              height: rect.height,
-              bottom: rect.bottom,
-              right: rect.right,
-            },
-            url: window.location.href,
-            title: document.title || 'Web Article',
-          });
-
-          // If in flashcards mode, auto-open flashcard creator with selection
-          if (activeMode === 'reading' && activeReadingFeature === 'flashcards') {
-            setFlashcardText(text);
-            setShowFlashcardModal(true);
-          }
-
-          // If in translate mode, auto-translate selection
-          if (activeMode === 'reading' && activeReadingFeature === 'translate') {
-            handleToolbarAction('translate');
-          }
-
-          // If in annotate mode, auto-highlight selection
-          if (activeMode === 'reading' && activeReadingFeature === 'annotate') {
-            applyVisualHighlight(text, 'yellow');
-            annotationsService.create({
-              url: window.location.href,
+          if (activeReadingFeature === 'annotate') {
+            handleAnnotateTarget(text, range);
+          } else if (
+            activeReadingFeature === 'meaning' ||
+            activeReadingFeature === 'flashcards' ||
+            activeReadingFeature === 'translate'
+          ) {
+            currentTargetTextRef.current = text;
+            setReadingTarget({
               text,
-              color: 'yellow',
+              rect: {
+                top: r.top,
+                left: r.left,
+                width: r.width,
+                height: r.height,
+                bottom: r.bottom,
+                right: r.right,
+              },
+              range: range.cloneRange(),
+              isSelection: true,
             });
           }
         } catch {
-          setSelection(null);
+          // ignore
         }
-      }, 50);
+      }, 100);
     };
 
-    const handleMouseDown = () => {
-      setHoverPosition(null);
-      setDictionaryEntry(null);
-      setTranslationResult(null);
+    let scrollRaf: number | null = null;
+    const handleScroll = () => {
+      if (scrollRaf) return;
+      scrollRaf = requestAnimationFrame(() => {
+        scrollRaf = null;
+        setReadingTarget((prev) => {
+          if (!prev) return null;
+          if (prev.range) {
+            const r = prev.range.getBoundingClientRect();
+            if (r.bottom < 0 || r.top > window.innerHeight) {
+              return null;
+            }
+            return {
+              ...prev,
+              rect: {
+                top: r.top,
+                left: r.left,
+                width: r.width,
+                height: r.height,
+                bottom: r.bottom,
+                right: r.right,
+              },
+            };
+          }
+          return prev;
+        });
+      });
     };
 
-    document.addEventListener('mouseup', handleMouseUp);
     document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
-      document.removeEventListener('mouseup', handleMouseUp);
       document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('scroll', handleScroll);
+      if (selectionTimeout) {
+        clearTimeout(selectionTimeout);
+      }
+      if (scrollRaf) {
+        cancelAnimationFrame(scrollRaf);
+      }
     };
   }, [isReadingLayerActive, activeReadingFeature]);
 
+
   // Visual Highlight Helper
-  const applyVisualHighlight = (text: string, color: string = 'yellow') => {
+  const applyVisualHighlight = (text: string, color: string = 'yellow', customRange?: Range) => {
     const colorBgMap: Record<string, string> = {
       yellow: getAccentSurface(accentColor, 0.28),
       green: 'rgba(53, 214, 162, 0.28)',
       blue: 'rgba(155, 124, 255, 0.28)',
     };
 
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) {
+    const bgColor = colorBgMap[color] || colorBgMap.yellow;
+
+    let rangeToHighlight: Range | null = null;
+    if (customRange) {
+      rangeToHighlight = customRange;
+    } else {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+        rangeToHighlight = sel.getRangeAt(0);
+      }
+    }
+
+    if (rangeToHighlight) {
       try {
-        const range = sel.getRangeAt(0);
         const span = document.createElement('mark');
         span.className = 'anvil-page-highlight';
-        span.style.backgroundColor = colorBgMap[color] || colorBgMap.yellow;
+        span.style.backgroundColor = bgColor;
         span.style.borderRadius = '3px';
         span.style.padding = '1px 3px';
         span.style.color = 'inherit';
         span.style.borderBottom = `1.5px solid ${accentColor}`;
-        range.surroundContents(span);
-        sel.removeAllRanges();
+        rangeToHighlight.surroundContents(span);
+        const sel = window.getSelection();
+        if (sel) sel.removeAllRanges();
+        return true;
       } catch {
-        // Fallback for complex cross-element selections
+        return highlightTextFallback(text, bgColor, accentColor);
       }
     }
+
+    return highlightTextFallback(text, bgColor, accentColor);
   };
 
-  const handleToolbarAction = async (action: AnvilAction) => {
-    if (!selection) return;
-
-    if (action === 'highlight') {
-      applyVisualHighlight(selection.text, 'yellow');
-      await annotationsService.create({
-        url: selection.url,
-        text: selection.text,
-        color: 'yellow',
-      });
-      setSelection(null);
-      return;
-    }
-
-    if (action === 'translate') {
-      const res = await aiService.translate(selection.text, 'es');
-      setTranslationResult(res);
-      setHoverPosition({ x: selection.rect.left + selection.rect.width / 2, y: selection.rect.top });
-      setSelection(null);
-      return;
-    }
-
-    if (action === 'read') {
-      handleStartSpeech(selection.text);
-      setSelection(null);
-      return;
-    }
-
-    if (action === 'flashcard') {
-      setFlashcardText(selection.text);
-      setShowFlashcardModal(true);
-      setSelection(null);
-      return;
-    }
-
-    // For explain or note: relay to Side Panel
-    await sendRuntimeMessage({
-      type: 'TOOLBAR_ACTION',
-      action,
-      selection,
+  const handleAnnotateTarget = async (customText?: string, customRange?: Range) => {
+    const text = customText || readingTarget?.text;
+    if (!text) return;
+    const range = customRange || readingTarget?.range;
+    applyVisualHighlight(text, 'yellow', range);
+    await annotationsService.create({
+      url: window.location.href,
+      text,
+      color: 'yellow',
     });
-
-    setSelection(null);
   };
+
 
   // Speech / TTS Handlers
   const handleStartSpeech = (textToSpeak?: string) => {
@@ -547,12 +560,20 @@ function ContentApp() {
   };
 
   const handleToggleReadingFeature = (id: CollapsedFeatureId) => {
-    if (activeReadingFeature === id) {
-      setActiveReadingFeature(null);
-      if (id === 'read') handleStopSpeech();
-    } else {
-      setActiveReadingFeature(id);
-      if (id === 'read') handleStartSpeech();
+    // Clear any active targets or popups
+    setReadingTarget(null);
+    currentTargetTextRef.current = '';
+
+    const nextFeature = activeReadingFeature === id ? null : id;
+    setActiveReadingFeature(nextFeature);
+
+    if (id === 'read') {
+      if (nextFeature === 'read') handleStartSpeech();
+      else handleStopSpeech();
+    }
+
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set({ anvil_active_reading_feature: nextFeature });
     }
   };
 
@@ -672,20 +693,8 @@ function ContentApp() {
             accentColor={accentColor}
           />
 
-          {/* Reading focus hover overlay — strictly active only when isReadingLayerActive is true */}
-          <ReadingHoverOverlay
-            enabled={isReadingLayerActive && (isReadingHoverActive || activeReadingFeature === 'read' || activeReadingFeature === 'meaning')}
-          />
-
-          {/* In-page floating feature cards */}
-          {activeReadingFeature === 'summary' && (
-            <FloatingSummaryCard
-              onClose={() => setActiveReadingFeature(null)}
-              onReadAloud={(text) => handleStartSpeech(text)}
-            />
-          )}
-
-          {activeReadingFeature === 'read' && (
+          {/* Read Aloud Audio Bar with Stop/Pause controls */}
+          {(activeReadingFeature === 'read' || isSpeaking) && (
             <FloatingAudioPlayer
               isSpeaking={isSpeaking}
               onPlayPause={handleToggleSpeech}
@@ -694,45 +703,42 @@ function ContentApp() {
               currentSpeed={speechRate}
               onClose={() => {
                 handleStopSpeech();
-                setActiveReadingFeature(null);
-              }}
-            />
-          )}
-
-          {showFlashcardModal && (
-            <FloatingFlashcardCreator
-              initialText={flashcardText}
-              onClose={() => setShowFlashcardModal(false)}
-              onSaved={() => setShowFlashcardModal(false)}
-            />
-          )}
-
-          {isReadingLayerActive && selection && !showFlashcardModal && (
-            <SelectionToolbar
-              selection={selection}
-              onAction={handleToolbarAction}
-              onClose={() => setSelection(null)}
-            />
-          )}
-
-          {isReadingLayerActive && hoverPosition && (dictionaryEntry || translationResult) && (
-            <HoverMeaningPopover
-              position={hoverPosition}
-              entry={dictionaryEntry}
-              translation={translationResult}
-              onLanguageChange={async (targetLang) => {
-                if (translationResult) {
-                  const updated = await aiService.translate(translationResult.original, targetLang);
-                  setTranslationResult(updated);
+                if (activeReadingFeature === 'read') {
+                  setActiveReadingFeature(null);
                 }
               }}
-              onClose={() => {
-                setHoverPosition(null);
-                setDictionaryEntry(null);
-                setTranslationResult(null);
-              }}
             />
           )}
+
+          {/* Reading Focus Contextual Popup: strictly gated to active reading features (meaning, flashcards, translate) */}
+          {isReadingLayerActive &&
+            activeReadingFeature &&
+            activeReadingFeature !== 'annotate' &&
+            activeReadingFeature !== 'read' &&
+            readingTarget &&
+            !showFlashcardModal && (
+              <ReadingContextualPopup
+                targetText={readingTarget.text}
+                targetRect={readingTarget.rect}
+                initialView={
+                  activeReadingFeature === 'flashcards'
+                    ? 'flashcard_confirm'
+                    : activeReadingFeature === 'translate'
+                    ? 'translate'
+                    : 'meaning'
+                }
+                onAnnotate={() => handleAnnotateTarget()}
+                onClose={() => {
+                  setReadingTarget(null);
+                  currentTargetTextRef.current = '';
+                }}
+                accentColor={accentColor}
+                onViewChange={(v) => {
+                  setPopupSubView(v);
+                  popupSubViewRef.current = v;
+                }}
+              />
+            )}
         </>
       )}
 

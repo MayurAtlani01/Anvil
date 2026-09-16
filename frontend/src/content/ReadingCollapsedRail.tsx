@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 
 export type CollapsedFeatureId =
-  | 'summary'
   | 'annotate'
   | 'read'
   | 'meaning'
@@ -27,12 +26,6 @@ interface FeatureItem {
 
 const FEATURES: FeatureItem[] = [
   {
-    id: 'summary',
-    label: 'AI Summary',
-    subtitle: 'Summarize this page',
-    icon: Sparkles,
-  },
-  {
     id: 'annotate',
     label: 'Annotate',
     subtitle: 'Highlight & take notes',
@@ -47,7 +40,7 @@ const FEATURES: FeatureItem[] = [
   {
     id: 'meaning',
     label: 'Meaning',
-    subtitle: 'Hover for meaning',
+    subtitle: 'Select a word for meaning',
     icon: Lightbulb,
   },
   {

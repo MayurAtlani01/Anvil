@@ -166,7 +166,7 @@ export const ReadingHoverOverlay: React.FC<ReadingHoverOverlayProps> = ({ enable
         borderRadius: 8,
         backgroundColor: 'var(--anvil-accent-surface, rgba(var(--anvil-accent-rgb, 255, 104, 69), 0.06))',
         border: '1.5px solid var(--anvil-accent-border-active, var(--anvil-accent, rgba(255, 104, 69, 0.5)))',
-        boxShadow: '0 0 16px var(--anvil-accent-glow-subtle, var(--anvil-accent-glow, rgba(255, 104, 69, 0.16)))',
+        boxShadow: 'none',
         transition: 'top 100ms ease, left 100ms ease, width 100ms ease, height 100ms ease, opacity 120ms ease',
       }}
     />

@@ -1,6 +1,7 @@
 import { CreateAnnotationInput, AnnotationsService } from '../api/annotations';
 import { Annotation } from '@/types';
 import { storage } from './storage';
+import { apiFetch } from '../api/apiClient';
 
 const ANNOTATIONS_STORAGE_KEY = 'anvil_annotations_data';
 
@@ -14,6 +15,12 @@ export class StorageAnnotationsService implements AnnotationsService {
   }
 
   async list(url?: string): Promise<Annotation[]> {
+    const query = url ? `?url=${encodeURIComponent(url)}` : '';
+    const apiData = await apiFetch<Annotation[]>(`/api/annotations${query}`);
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const list = await this.getStored();
     if (!url) return list;
     const cleanUrl = url.split('#')[0].split('?')[0];
@@ -21,6 +28,14 @@ export class StorageAnnotationsService implements AnnotationsService {
   }
 
   async create(input: CreateAnnotationInput): Promise<Annotation> {
+    const apiData = await apiFetch<Annotation>('/api/annotations', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const list = await this.getStored();
     const newAnnotation: Annotation = {
       id: `ann-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -38,12 +53,14 @@ export class StorageAnnotationsService implements AnnotationsService {
   }
 
   async remove(id: string): Promise<void> {
+    await apiFetch(`/api/annotations/${id}`, { method: 'DELETE' });
     const list = await this.getStored();
     const filtered = list.filter((a) => a.id !== id);
     await this.save(filtered);
   }
 
   async clearForUrl(url: string): Promise<void> {
+    await apiFetch(`/api/annotations/clear?url=${encodeURIComponent(url)}`, { method: 'DELETE' });
     const list = await this.getStored();
     const cleanUrl = url.split('#')[0].split('?')[0];
     const filtered = list.filter((a) => !a.url.includes(cleanUrl) && !cleanUrl.includes(a.url));

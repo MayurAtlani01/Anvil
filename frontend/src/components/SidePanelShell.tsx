@@ -40,13 +40,16 @@ import {
   Moon,
   Sun,
   Palette,
+  Trash2,
 } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
 import { useModeStore } from '@/store/useModeStore';
 import { useToastStore } from '@/store/useToastStore';
 import { useThemeStore, PRESET_ACCENT_COLORS, ThemeMode } from '@/store/useThemeStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { Modal } from './Modal';
 import { Progress } from './Progress';
+import { AuthModal } from './AuthModal';
 import { storage } from '@/services/storage/storage';
 import { APIConfig } from '@/services/api/aiService';
 import { notesService, examService, interviewService, bookmarksService, flashcardsService } from '@/services';
@@ -100,6 +103,10 @@ export const SidePanelShell: React.FC = () => {
   // Window utility states
   const [isPinned, setIsPinned] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+
+  // Auth & Profile state
+  const { user, isAuthenticated, hydrate: hydrateAuth } = useAuthStore();
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Profile state
   const [userName, setUserName] = useState('Anvil Scholar');
@@ -202,6 +209,7 @@ export const SidePanelShell: React.FC = () => {
   // Load initial settings, theme, profile, active mode data, and reading focus state
   useEffect(() => {
     hydrateTheme();
+    hydrateAuth();
 
     // Establish liveness port connection to background
     let port: chrome.runtime.Port | null = null;
@@ -217,10 +225,12 @@ export const SidePanelShell: React.FC = () => {
       chrome.storage.local.set({ anvil_sidepanel_open: true });
     }
 
-    // Listen for CLOSE_SIDE_PANEL message to cleanly close window
+    // Listen for CLOSE_SIDE_PANEL and data refresh messages
     const handleRuntimeMessage = (message: any) => {
       if (message?.type === 'CLOSE_SIDE_PANEL') {
         window.close();
+      } else if (message?.type === 'FLASHCARD_SAVED' || message?.type === 'FLASHCARD_DELETED') {
+        loadModeData('reading');
       }
     };
     if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
@@ -307,7 +317,7 @@ export const SidePanelShell: React.FC = () => {
       return examData.pyqs.length + examData.formulas.length + examData.revisionNotes.length;
     }
     if (mode === 'reading') {
-      return readingData.notes.length + readingData.bookmarks.length + readingData.flashcards.length;
+      return readingData.flashcards.length;
     }
     if (mode === 'interview') {
       return interviewData.sessions.length + interviewData.questions.length + (interviewData.resume ? 1 : 0);
@@ -440,24 +450,25 @@ export const SidePanelShell: React.FC = () => {
     });
   };
 
-  const handleCreateFlashcardFromFormula = async (formula: Formula) => {
+
+
+  // Flashcard Deletion Handler
+  const handleDeleteFlashcard = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     try {
-      await flashcardsService.create({
-        front: `What is the formula and meaning of ${formula.name}?`,
-        back: `${formula.formula}\n\n${formula.explanation}`,
-        sourceMode: 'reading',
-        difficulty: formula.difficulty || 'medium',
-        deckId: formula.subject,
-      });
-      loadModeData('reading');
+      await flashcardsService.remove(id);
+      setReadingData((prev) => ({
+        ...prev,
+        flashcards: prev.flashcards.filter((f) => f.id !== id),
+      }));
       addToast({
-        type: 'success',
-        message: `Added "${formula.name}" to Flashcard Deck!`,
+        type: 'info',
+        message: 'Flashcard deleted',
       });
     } catch {
       addToast({
         type: 'error',
-        message: 'Failed to create flashcard.',
+        message: 'Failed to delete flashcard',
       });
     }
   };
@@ -657,8 +668,27 @@ export const SidePanelShell: React.FC = () => {
             )}
           </div>
 
-          {/* Top Right Window Controls */}
-          <div className="flex items-center gap-1 z-30">
+          {/* Top Right Window Controls & Profile */}
+          <div className="flex items-center gap-1.5 z-30">
+            {/* Account / Profile Button */}
+            <button
+              type="button"
+              onClick={() => setShowAuthModal(true)}
+              title={isAuthenticated ? `Account: ${user?.full_name || user?.email}` : 'Sign In / Create Account'}
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer border ${
+                isAuthenticated
+                  ? isDark
+                    ? 'border-[#292C30] bg-[#17191C] text-[#F5F5F4] hover:border-[#FF6845]'
+                    : 'border-[#E5E7EB] bg-[#FFFFFF] text-[#111827] hover:border-[#FF6845]'
+                  : 'border-[#FF6845] bg-[#FF684518] text-[#FF6845] hover:bg-[#FF684528]'
+              }`}
+            >
+              <User className="w-3 h-3" />
+              <span className="max-w-[75px] truncate">
+                {isAuthenticated ? (user?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Account') : 'Sign In'}
+              </span>
+            </button>
+
             <button
               type="button"
               onClick={() => {
@@ -725,7 +755,6 @@ export const SidePanelShell: React.FC = () => {
                     borderColor: accentColor,
                     color: accentColor,
                     backgroundColor: `${accentColor}18`,
-                    boxShadow: `0 0 12px ${accentColor}25`,
                   }
                 : undefined
             }
@@ -754,7 +783,6 @@ export const SidePanelShell: React.FC = () => {
                     borderColor: accentColor,
                     color: accentColor,
                     backgroundColor: `${accentColor}18`,
-                    boxShadow: `0 0 12px ${accentColor}25`,
                   }
                 : undefined
             }
@@ -783,7 +811,6 @@ export const SidePanelShell: React.FC = () => {
                     borderColor: accentColor,
                     color: accentColor,
                     backgroundColor: `${accentColor}18`,
-                    boxShadow: `0 0 12px ${accentColor}25`,
                   }
                 : undefined
             }
@@ -878,7 +905,7 @@ export const SidePanelShell: React.FC = () => {
                 className="w-2 h-2 rounded-full transition-all duration-300 shrink-0"
                 style={{
                   backgroundColor: readingFocus ? accentColor : '#73767C',
-                  boxShadow: readingFocus ? `0 0 8px ${accentColor}` : 'none',
+                  boxShadow: 'none',
                 }}
               />
               <span className={`text-xs font-bold tracking-tight ${isDark ? 'text-[#F5F5F4]' : 'text-[#111827]'}`}>
@@ -1797,19 +1824,10 @@ export const SidePanelShell: React.FC = () => {
                             {f.explanation}
                           </p>
 
-                          <div className="flex items-center justify-between pt-1">
+                          <div className="pt-1">
                             <span className={`text-[10px] ${isDark ? 'text-[#73767C]' : 'text-[#9CA3AF]'}`}>
                               Ex: {f.example}
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => handleCreateFlashcardFromFormula(f)}
-                              style={{ color: accentColor }}
-                              className="text-[10px] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
-                            >
-                              <Sparkles className="w-2.5 h-2.5" />
-                              <span>Flashcard</span>
-                            </button>
                           </div>
                         </div>
                       ))
@@ -1957,189 +1975,39 @@ export const SidePanelShell: React.FC = () => {
               isDark ? 'bg-[#17191C] border-[#292C30]' : 'bg-[#FFFFFF] border-[#E5E7EB] shadow-xs'
             }`}
           >
-            {/* Sub-Navigation Tabs */}
+            {/* Header */}
             <div className={`flex items-center justify-between pb-2 mb-3 border-b ${isDark ? 'border-[#292C30]' : 'border-[#E5E7EB]'}`}>
-              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-                {[
-                  { id: 'all', label: `All (${totalModeItemsCount})` },
-                  { id: 'notes', label: `Notes (${readingData.notes.length})` },
-                  { id: 'bookmarks', label: `Saved (${readingData.bookmarks.length})` },
-                  { id: 'flashcards', label: `Flashcards (${readingData.flashcards.length})` },
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setReadingSubTab(t.id as any)}
-                    style={
-                      readingSubTab === t.id
-                        ? {
-                            backgroundColor: `${accentColor}18`,
-                            color: accentColor,
-                            borderColor: `${accentColor}40`,
-                          }
-                        : undefined
-                    }
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
-                      readingSubTab === t.id
-                        ? 'border shadow-xs'
-                        : isDark
-                        ? 'text-[#A7A9AD] hover:text-[#F5F5F4] hover:bg-[#111315]'
-                        : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6]'
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-bold ${isDark ? 'text-[#F5F5F4]' : 'text-[#111827]'}`}>
+                  Flashcards
+                </span>
+                <span
+                  className="text-[10px] px-2 py-0.5 rounded-full font-semibold border"
+                  style={{
+                    backgroundColor: `${accentColor}18`,
+                    borderColor: `${accentColor}35`,
+                    color: accentColor,
+                  }}
+                >
+                  {readingData.flashcards.length}
+                </span>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setShowAddNotesModal(true)}
-                style={{ color: accentColor }}
-                className="text-[10px] font-semibold flex items-center gap-1 shrink-0 cursor-pointer ml-2 hover:opacity-80"
-              >
-                <Plus className="w-3 h-3" />
-                <span>Add</span>
-              </button>
             </div>
 
             <div className="space-y-2.5 overflow-y-auto flex-1">
-              {/* ALL EMPTY STATE */}
-              {readingSubTab === 'all' && totalModeItemsCount === 0 && (
-                <div className={`py-12 px-4 rounded-xl border border-dashed text-center flex flex-col items-center justify-center ${
-                  isDark ? 'border-[#292C30] bg-[#111315]/40 text-[#73767C]' : 'border-[#E5E7EB] bg-[#F9FAFB] text-[#6B7280]'
-                }`}>
-                  <BookOpen className="w-8 h-8 mb-2 opacity-40" />
-                  <p className="text-xs font-medium">No saved items yet</p>
-                  <p className="text-[10px] mt-0.5 opacity-70">Save notes, bookmarks, or flashcards while browsing to see them here.</p>
-                </div>
-              )}
-
-              {/* NOTES EMPTY STATE */}
-              {readingSubTab === 'notes' && readingData.notes.length === 0 && (
-                <div className={`py-12 px-4 rounded-xl border border-dashed text-center flex flex-col items-center justify-center ${
-                  isDark ? 'border-[#292C30] bg-[#111315]/40 text-[#73767C]' : 'border-[#E5E7EB] bg-[#F9FAFB] text-[#6B7280]'
-                }`}>
-                  <FileText className="w-8 h-8 mb-2 opacity-40" />
-                  <p className="text-xs font-medium">No notes created yet</p>
-                  <p className="text-[10px] mt-0.5 opacity-70">Click + Add above or highlight text on any page to create study notes.</p>
-                </div>
-              )}
-
-              {/* NOTES */}
-              {(readingSubTab === 'all' || readingSubTab === 'notes') && (
-                <div className="space-y-2">
-                  {readingData.notes
-                    .filter(
-                      (n) =>
-                        !searchQuery ||
-                        n.pageTitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        n.content.toLowerCase().includes(searchQuery.toLowerCase())
-                    )
-                    .map((n) => (
-                      <div
-                        key={n.id}
-                        className={`p-3 rounded-xl border transition-colors space-y-1.5 ${
-                          isDark ? 'bg-[#111315] border-[#292C30] hover:border-[#383C42]' : 'bg-[#F9FAFB] border-[#E5E7EB] hover:border-[#D1D5DB]'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className={`text-xs font-bold truncate max-w-[200px] ${isDark ? 'text-[#F5F5F4]' : 'text-[#111827]'}`}>
-                            {n.pageTitle || 'Study Note'}
-                          </span>
-                          <span
-                            className="text-[9px] px-1.5 py-0.5 rounded font-medium border"
-                            style={{
-                              backgroundColor: `${accentColor}18`,
-                              borderColor: `${accentColor}35`,
-                              color: accentColor,
-                            }}
-                          >
-                            Note
-                          </span>
-                        </div>
-                        <p className={`text-[11px] leading-relaxed ${isDark ? 'text-[#A7A9AD]' : 'text-[#6B7280]'}`}>
-                          {n.content}
-                        </p>
-                        {n.tags && n.tags.length > 0 && (
-                          <div className="flex items-center gap-1 flex-wrap pt-0.5">
-                            {n.tags.map((t, idx) => (
-                              <span
-                                key={idx}
-                                className={`text-[9px] px-1.5 py-0.2 rounded border ${
-                                  isDark ? 'bg-[#17191C] text-[#73767C] border-[#292C30]' : 'bg-[#FFFFFF] text-[#6B7280] border-[#E5E7EB]'
-                                }`}
-                              >
-                                {t}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                </div>
-              )}
-
-              {/* BOOKMARKS EMPTY STATE */}
-              {readingSubTab === 'bookmarks' && readingData.bookmarks.length === 0 && (
-                <div className={`py-12 px-4 rounded-xl border border-dashed text-center flex flex-col items-center justify-center ${
-                  isDark ? 'border-[#292C30] bg-[#111315]/40 text-[#73767C]' : 'border-[#E5E7EB] bg-[#F9FAFB] text-[#6B7280]'
-                }`}>
-                  <BookmarkIcon className="w-8 h-8 mb-2 opacity-40" />
-                  <p className="text-xs font-medium">No saved articles or bookmarks</p>
-                  <p className="text-[10px] mt-0.5 opacity-70">Bookmark key references or pages to easily revisit them later.</p>
-                </div>
-              )}
-
-              {/* BOOKMARKS */}
-              {(readingSubTab === 'all' || readingSubTab === 'bookmarks') && (
-                <div className="space-y-2">
-                  {readingData.bookmarks
-                    .filter(
-                      (b) =>
-                        !searchQuery ||
-                        b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        b.url.toLowerCase().includes(searchQuery.toLowerCase())
-                    )
-                    .map((b) => (
-                      <div
-                        key={b.id}
-                        className={`p-3 rounded-xl border transition-colors space-y-1.5 ${
-                          isDark ? 'bg-[#111315] border-[#292C30] hover:border-[#383C42]' : 'bg-[#F9FAFB] border-[#E5E7EB] hover:border-[#D1D5DB]'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className={`text-xs font-bold truncate max-w-[200px] ${isDark ? 'text-[#F5F5F4]' : 'text-[#111827]'}`}>
-                            {b.title}
-                          </span>
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#12241C] text-[#34D399] font-semibold border border-[#34D399]/25">
-                            Article
-                          </span>
-                        </div>
-                        {b.snippet && (
-                          <p className={`text-[11px] line-clamp-2 leading-relaxed ${isDark ? 'text-[#A7A9AD]' : 'text-[#6B7280]'}`}>
-                            {b.snippet}
-                          </p>
-                        )}
-                        <div className={`text-[10px] truncate ${isDark ? 'text-[#73767C]' : 'text-[#9CA3AF]'}`}>{b.url}</div>
-                      </div>
-                    ))}
-                </div>
-              )}
-
               {/* FLASHCARDS EMPTY STATE */}
-              {readingSubTab === 'flashcards' && readingData.flashcards.length === 0 && (
+              {readingData.flashcards.length === 0 && (
                 <div className={`py-12 px-4 rounded-xl border border-dashed text-center flex flex-col items-center justify-center ${
                   isDark ? 'border-[#292C30] bg-[#111315]/40 text-[#73767C]' : 'border-[#E5E7EB] bg-[#F9FAFB] text-[#6B7280]'
                 }`}>
                   <Sparkles className="w-8 h-8 mb-2 opacity-40" />
                   <p className="text-xs font-medium">No flashcards created yet</p>
-                  <p className="text-[10px] mt-0.5 opacity-70">Create flashcards from articles or study material to test your recall.</p>
+                  <p className="text-[10px] mt-0.5 opacity-70">Select text and click Flashcard in Reading Mode to save flashcards here.</p>
                 </div>
               )}
 
               {/* FLASHCARDS */}
-              {(readingSubTab === 'all' || readingSubTab === 'flashcards') && (
+              {readingData.flashcards.length > 0 && (
                 <div className="space-y-2">
                   {readingData.flashcards
                     .filter(
@@ -2164,13 +2032,23 @@ export const SidePanelShell: React.FC = () => {
                               <Sparkles className="w-3 h-3" />
                               <span>{isFlipped ? 'Answer' : 'Question Prompt'}</span>
                             </span>
-                            <span
-                              className={`text-[9px] px-1.5 py-0.5 rounded border ${
-                                isDark ? 'bg-[#17191C] text-[#73767C] border-[#292C30]' : 'bg-[#F3F4F6] text-[#6B7280] border-[#E5E7EB]'
-                              }`}
-                            >
-                              Click to Flip
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className={`text-[9px] px-1.5 py-0.5 rounded border ${
+                                  isDark ? 'bg-[#17191C] text-[#73767C] border-[#292C30]' : 'bg-[#F3F4F6] text-[#6B7280] border-[#E5E7EB]'
+                                }`}
+                              >
+                                Click to Flip
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => handleDeleteFlashcard(fc.id, e)}
+                                className="p-1 rounded text-[#73767C] hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                                title="Delete flashcard"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                           <div className={`text-xs font-semibold leading-relaxed ${isDark ? 'text-[#F5F5F4]' : 'text-[#111827]'}`}>
                             {isFlipped ? fc.back : fc.front}
@@ -2827,6 +2705,20 @@ export const SidePanelShell: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Anvil Authentication & Profile Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        accentColor={accentColor}
+        onSuccess={() => {
+          loadModeData(mode);
+          addToast({
+            type: 'success',
+            message: 'Signed in! Flashcards and notes will sync to your account.',
+          });
+        }}
+      />
     </div>
   );
 };

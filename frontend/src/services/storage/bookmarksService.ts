@@ -1,6 +1,7 @@
 import { BookmarkFilter, BookmarksService, CreateBookmarkInput } from '../api/bookmarks';
 import { Bookmark } from '@/types';
 import { storage } from './storage';
+import { apiFetch } from '../api/apiClient';
 
 const BOOKMARKS_STORAGE_KEY = 'anvil_bookmarks_data';
 
@@ -16,6 +17,16 @@ export class StorageBookmarksService implements BookmarksService {
   }
 
   async list(filter?: BookmarkFilter): Promise<Bookmark[]> {
+    const params = new URLSearchParams();
+    if (filter?.contentType) params.append('contentType', filter.contentType);
+    if (filter?.search) params.append('search', filter.search);
+
+    const queryStr = params.toString() ? `?${params.toString()}` : '';
+    const apiData = await apiFetch<Bookmark[]>(`/api/bookmarks${queryStr}`);
+    if (apiData !== null) {
+      return apiData;
+    }
+
     let list = await this.getStored();
     if (filter?.contentType) {
       list = list.filter((b) => b.contentType === filter.contentType);
@@ -33,11 +44,23 @@ export class StorageBookmarksService implements BookmarksService {
   }
 
   async get(id: string): Promise<Bookmark | null> {
+    const apiData = await apiFetch<Bookmark>(`/api/bookmarks/${id}`);
+    if (apiData !== null) {
+      return apiData;
+    }
     const list = await this.getStored();
     return list.find((b) => b.id === id) || null;
   }
 
   async create(input: CreateBookmarkInput): Promise<Bookmark> {
+    const apiData = await apiFetch<Bookmark>('/api/bookmarks', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const list = await this.getStored();
     const newBookmark: Bookmark = {
       id: `bm-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -56,12 +79,21 @@ export class StorageBookmarksService implements BookmarksService {
   }
 
   async remove(id: string): Promise<void> {
+    await apiFetch(`/api/bookmarks/${id}`, { method: 'DELETE' });
     const list = await this.getStored();
     const filtered = list.filter((b) => b.id !== id);
     await this.save(filtered);
   }
 
   async toggle(input: CreateBookmarkInput): Promise<{ bookmark: Bookmark | null; isBookmarked: boolean }> {
+    const apiData = await apiFetch<{ bookmark: Bookmark | null; isBookmarked: boolean }>('/api/bookmarks/toggle', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    if (apiData !== null) {
+      return apiData;
+    }
+
     const list = await this.getStored();
     const existingIndex = list.findIndex(
       (b) =>
@@ -80,6 +112,12 @@ export class StorageBookmarksService implements BookmarksService {
   }
 
   async isBookmarked(contentIdOrUrl: string): Promise<boolean> {
+    const apiData = await apiFetch<{ isBookmarked: boolean }>(
+      `/api/bookmarks/check?target=${encodeURIComponent(contentIdOrUrl)}`
+    );
+    if (apiData !== null) {
+      return apiData.isBookmarked;
+    }
     const list = await this.getStored();
     return list.some((b) => b.contentId === contentIdOrUrl || b.url === contentIdOrUrl);
   }

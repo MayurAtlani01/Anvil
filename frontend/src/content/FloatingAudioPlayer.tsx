@@ -34,14 +34,33 @@ export const FloatingAudioPlayer: React.FC<FloatingAudioPlayerProps> = ({
 
       <div style={{ width: 1, height: 16, background: '#2A2A2A', margin: '0 2px' }} />
 
-      {/* Play/Pause Button */}
+      {/* Pause / Resume Button */}
       <button
         type="button"
         onClick={onPlayPause}
         className={`anvil-audio-btn ${isSpeaking ? 'anvil-audio-btn-active' : ''}`}
-        title={isSpeaking ? 'Pause' : 'Play'}
+        title={isSpeaking ? 'Pause reading' : 'Resume reading'}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          padding: '0 8px',
+          width: 'auto',
+          fontSize: 11,
+          fontWeight: 600,
+        }}
       >
-        {isSpeaking ? <Pause style={{ width: 13, height: 13 }} /> : <Play style={{ width: 13, height: 13 }} />}
+        {isSpeaking ? (
+          <>
+            <Pause style={{ width: 12, height: 12 }} />
+            <span>Pause</span>
+          </>
+        ) : (
+          <>
+            <Play style={{ width: 12, height: 12 }} />
+            <span>Resume</span>
+          </>
+        )}
       </button>
 
       {/* Stop Button */}
@@ -49,9 +68,21 @@ export const FloatingAudioPlayer: React.FC<FloatingAudioPlayerProps> = ({
         type="button"
         onClick={onStop}
         className="anvil-audio-btn"
-        title="Stop Speech"
+        title="Stop reading completely"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          padding: '0 8px',
+          width: 'auto',
+          fontSize: 11,
+          fontWeight: 600,
+          color: '#FF7D7D',
+          borderColor: 'rgba(255, 125, 125, 0.3)',
+        }}
       >
-        <Square style={{ width: 11, height: 11 }} />
+        <Square style={{ width: 10, height: 10, fill: 'currentColor' }} />
+        <span>Stop</span>
       </button>
 
       <div style={{ width: 1, height: 16, background: '#2A2A2A', margin: '0 2px' }} />
