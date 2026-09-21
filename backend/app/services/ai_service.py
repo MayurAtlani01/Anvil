@@ -11,13 +11,11 @@ from app.schemas.ai import (
     GeneratedFlashcardItem,
     AnswerFeedbackResponse,
 )
-from app.schemas.interview import ResumeAnalysisResponse
 
 
 class AIService:
     """Service abstraction for AI features (Summarization, Explanation, Translation, Flashcard generation,
-
-    Interview Answer Evaluation, and Resume Analysis).
+    Interview Answer Evaluation, Question Generation from Screen/Document, and Resume Analysis).
 
     Strict Rule: If AI_API_KEY is not configured, raises a clean HTTP 503 error.
     Zero fake or hardcoded mock data.
@@ -35,21 +33,35 @@ class AIService:
                 detail="AI service is not configured. Please provide AI_API_KEY in backend environment variables to enable real AI features.",
             )
 
-    async def _call_llm(self, prompt: str, system_instruction: Optional[str] = None) -> str:
-        """Call external LLM provider if configured."""
+    async def _call_llm(
+        self,
+        prompt: str,
+        system_instruction: Optional[str] = None,
+        image_base64: Optional[str] = None,
+        mime_type: str = "image/png",
+    ) -> str:
+        """Call external LLM provider with optional image data for multimodal inspection."""
         self._ensure_configured()
 
         if self.provider == "gemini":
-            # Call Google Gemini API
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
             headers = {"Content-Type": "application/json"}
-            payload: Dict[str, Any] = {
-                "contents": [{"parts": [{"text": prompt}]}]
-            }
+
+            parts: List[Dict[str, Any]] = []
+            if image_base64:
+                parts.append({
+                    "inlineData": {
+                        "mimeType": mime_type,
+                        "data": image_base64.strip(),
+                    }
+                })
+            parts.append({"text": prompt})
+
+            payload: Dict[str, Any] = {"contents": [{"parts": parts}]}
             if system_instruction:
                 payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
 
-            async with httpx.AsyncClient(timeout=45.0) as client:
+            async with httpx.AsyncClient(timeout=60.0) as client:
                 res = await client.post(url, headers=headers, json=payload)
                 if res.status_code != 200:
                     raise HTTPException(
@@ -64,8 +76,8 @@ class AIService:
                         status_code=status.HTTP_502_BAD_GATEWAY,
                         detail="Unexpected response format from Gemini API",
                     )
+
         elif self.provider in ("openai", "custom"):
-            # Call OpenAI-compatible API
             url = "https://api.openai.com/v1/chat/completions"
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
@@ -74,14 +86,25 @@ class AIService:
             messages = []
             if system_instruction:
                 messages.append({"role": "system", "content": system_instruction})
-            messages.append({"role": "user", "content": prompt})
+
+            if image_base64:
+                content: List[Dict[str, Any]] = [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{mime_type};base64,{image_base64.strip()}"},
+                    },
+                ]
+                messages.append({"role": "user", "content": content})
+            else:
+                messages.append({"role": "user", "content": prompt})
 
             payload = {
                 "model": self.model or "gpt-4o-mini",
                 "messages": messages,
                 "temperature": 0.3,
             }
-            async with httpx.AsyncClient(timeout=45.0) as client:
+            async with httpx.AsyncClient(timeout=60.0) as client:
                 res = await client.post(url, headers=headers, json=payload)
                 if res.status_code != 200:
                     raise HTTPException(
@@ -195,6 +218,80 @@ class AIService:
         clean_json = raw_text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         data = json.loads(clean_json)
         return AnswerFeedbackResponse(**data)
+
+    async def generate_interview_questions(
+        self,
+        content: Optional[str] = None,
+        image_base64: Optional[str] = None,
+        category: str = "technical",
+        difficulty: str = "medium",
+        count: int = 3,
+    ) -> List[Dict[str, Any]]:
+        """Generate structured interview questions from screen capture image or document context."""
+        self._ensure_configured()
+        context_desc = f"Context Content:\n{content[:8000]}" if content else "Context provided in attached image/screen capture."
+
+        prompt = (
+            f"Generate {count} technical interview questions for category '{category}' at difficulty level '{difficulty}'.\n\n"
+            f"{context_desc}\n\n"
+            "Respond ONLY with a JSON array in this exact format:\n"
+            "[\n"
+            "  {\n"
+            '    "title": "Short descriptive question title",\n'
+            '    "prompt": "Detailed problem statement or interview question prompt",\n'
+            '    "description": "Background context or problem overview",\n'
+            f'    "category": "{category}",\n'
+            f'    "difficulty": "{difficulty}",\n'
+            '    "tags": ["tag1", "tag2"],\n'
+            '    "hints": ["hint 1", "hint 2"],\n'
+            '    "rubrics": ["rubric 1", "rubric 2"],\n'
+            '    "sampleAnswer": "Model solution approach or explanation",\n'
+            '    "codeSnippet": "Optional starter code or None"\n'
+            "  }\n"
+            "]"
+        )
+        raw_text = await self._call_llm(
+            prompt=prompt,
+            system_instruction="You are an expert technical interviewer and question author. Output raw JSON only.",
+            image_base64=image_base64,
+        )
+        clean_json = raw_text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        items = json.loads(clean_json)
+        return items
+
+    async def analyze_resume(
+        self,
+        file_name: str,
+        resume_text: str,
+        target_role: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Analyze resume against engineering qualifications using external LLM."""
+        self._ensure_configured()
+        prompt = (
+            f"Analyze this software engineering resume:\n\n"
+            f"FileName: {file_name}\n"
+            f"Target Role: {target_role or 'Software Engineer'}\n\n"
+            f"Resume Content:\n{resume_text[:12000]}\n\n"
+            "Respond ONLY with a JSON object in this exact format:\n"
+            "{\n"
+            f'  "fileName": "{file_name}",\n'
+            '  "overallFitScore": integer 0-100,\n'
+            f'  "targetRole": "{target_role or "Software Engineer"}",\n'
+            '  "keyStrengths": ["strength 1", "strength 2"],\n'
+            '  "skillGaps": ["gap 1", "gap 2"],\n'
+            '  "recommendedRounds": ["track 1", "track 2"],\n'
+            '  "matchingKeywords": ["keyword 1", "keyword 2"],\n'
+            '  "suggestedActionItems": ["action 1", "action 2"],\n'
+            '  "sampleQuestions": ["question 1", "question 2"]\n'
+            "}"
+        )
+        raw_text = await self._call_llm(
+            prompt,
+            system_instruction="You are a senior technical hiring manager and engineering recruiter. Output raw JSON only.",
+        )
+        clean_json = raw_text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        data = json.loads(clean_json)
+        return data
 
 
 ai_service = AIService()

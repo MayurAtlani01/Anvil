@@ -3,8 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import Formula, Question, RevisionNote, User
+from app.db.models import Bookmark, Formula, Question, RevisionNote, User
 from app.dependencies.auth import get_optional_user
+from app.schemas.bookmarks import BookmarkResponse
 from app.schemas.exam import (
     QuestionCreate,
     QuestionResponse,
@@ -12,7 +13,6 @@ from app.schemas.exam import (
     FormulaResponse,
     RevisionNoteCreate,
     RevisionNoteResponse,
-    FrequentlyAskedTopicResponse,
 )
 
 router = APIRouter(prefix="/api/exam", tags=["Exam Mode"])
@@ -29,10 +29,27 @@ def list_pyqs(
     year: Optional[int] = Query(None),
     difficulty: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
+    scope: Optional[str] = Query("all", description="Filter by scope: 'all', 'library' (Anvil Library), or 'my' (My PYQs)"),
     db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
-    """Retrieve Exam Mode Previous Year Questions (PYQs) with isolation to exam mode only."""
+    """Retrieve Exam Mode Previous Year Questions (PYQs) with isolation to exam mode only.
+    Supports separating Anvil Library (curated) and My PYQs (student-created).
+    """
     query = db.query(Question).filter(Question.mode == "exam")
+
+    # Scope separation: Anvil Library vs My PYQs
+    if scope == "library":
+        query = query.filter(Question.user_id.is_(None))
+    elif scope in ("my", "mine"):
+        if current_user:
+            query = query.filter(Question.user_id == current_user.id)
+        else:
+            query = query.filter(Question.user_id.isnot(None))
+    elif current_user:
+        query = query.filter(
+            (Question.user_id.is_(None)) | (Question.user_id == current_user.id)
+        )
 
     if subject and subject.lower() != "all":
         query = query.filter(Question.subject.ilike(subject.strip()))
@@ -54,6 +71,51 @@ def list_pyqs(
     return query.order_by(Question.created_at.desc()).all()
 
 
+@router.get("/pyqs/library", response_model=List[QuestionResponse])
+def list_library_pyqs(
+    subject: Optional[str] = Query(None),
+    topic: Optional[str] = Query(None),
+    year: Optional[int] = Query(None),
+    difficulty: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """Retrieve curated Anvil Library PYQs only."""
+    return list_pyqs(
+        subject=subject,
+        topic=topic,
+        year=year,
+        difficulty=difficulty,
+        search=search,
+        scope="library",
+        db=db,
+        current_user=None,
+    )
+
+
+@router.get("/pyqs/my", response_model=List[QuestionResponse])
+def list_my_pyqs(
+    subject: Optional[str] = Query(None),
+    topic: Optional[str] = Query(None),
+    year: Optional[int] = Query(None),
+    difficulty: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    """Retrieve student-created PYQs (My PYQs) only."""
+    return list_pyqs(
+        subject=subject,
+        topic=topic,
+        year=year,
+        difficulty=difficulty,
+        search=search,
+        scope="my",
+        db=db,
+        current_user=current_user,
+    )
+
+
 @router.get("/pyqs/{id}", response_model=QuestionResponse)
 def get_pyq(id: str, db: Session = Depends(get_db)):
     q = db.query(Question).filter(Question.id == id, Question.mode == "exam").first()
@@ -68,7 +130,7 @@ def create_pyq(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
-    """Add a new Exam Mode question / PYQ."""
+    """Add a new Exam Mode question / PYQ (assigned to student if logged in)."""
     pyq = Question(
         user_id=current_user.id if current_user else None,
         title=pyq_in.title,
@@ -105,10 +167,27 @@ def list_formulas(
     subject: Optional[str] = Query(None),
     topic: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
+    scope: Optional[str] = Query("all", description="Filter by scope: 'all', 'library' (Anvil Formulas), or 'my' (My Formulas)"),
     db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
-    """Retrieve Exam Mode Formula Repository."""
+    """Retrieve Exam Mode Formula Repository.
+    Supports separating curated Anvil Formulas from student My Formulas.
+    """
     query = db.query(Formula)
+
+    # Scope separation: Anvil Formulas vs My Formulas
+    if scope == "library":
+        query = query.filter(Formula.user_id.is_(None))
+    elif scope in ("my", "mine"):
+        if current_user:
+            query = query.filter(Formula.user_id == current_user.id)
+        else:
+            query = query.filter(Formula.user_id.isnot(None))
+    elif current_user:
+        query = query.filter(
+            (Formula.user_id.is_(None)) | (Formula.user_id == current_user.id)
+        )
 
     if subject and subject.lower() != "all":
         query = query.filter(Formula.subject.ilike(subject.strip()))
@@ -126,13 +205,50 @@ def list_formulas(
     return query.order_by(Formula.created_at.desc()).all()
 
 
+@router.get("/formulas/library", response_model=List[FormulaResponse])
+def list_library_formulas(
+    subject: Optional[str] = Query(None),
+    topic: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """Retrieve curated Anvil Formulas only."""
+    return list_formulas(
+        subject=subject,
+        topic=topic,
+        search=search,
+        scope="library",
+        db=db,
+        current_user=None,
+    )
+
+
+@router.get("/formulas/my", response_model=List[FormulaResponse])
+def list_my_formulas(
+    subject: Optional[str] = Query(None),
+    topic: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    """Retrieve student-created formulas (My Formulas) only."""
+    return list_formulas(
+        subject=subject,
+        topic=topic,
+        search=search,
+        scope="my",
+        db=db,
+        current_user=current_user,
+    )
+
+
 @router.post("/formulas", response_model=FormulaResponse, status_code=status.HTTP_201_CREATED)
 def create_formula(
     f_in: FormulaCreate,
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
-    """Add a formula to the Exam Mode repository."""
+    """Add a formula to the Exam Mode repository (assigned to student if logged in)."""
     formula = Formula(
         user_id=current_user.id if current_user else None,
         name=f_in.name,
@@ -151,7 +267,7 @@ def create_formula(
 
 
 # ==========================================
-# 3. REVISION NOTES
+# 3. REVISION NOTES (Student-Owned)
 # ==========================================
 
 @router.get("/revision-notes", response_model=List[RevisionNoteResponse])
@@ -159,9 +275,15 @@ def list_revision_notes(
     subject: Optional[str] = Query(None),
     topic: Optional[str] = Query(None),
     db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
-    """Retrieve high-yield revision notes."""
+    """Retrieve high-yield revision notes. Strictly student-owned."""
     query = db.query(RevisionNote)
+    if current_user:
+        query = query.filter(RevisionNote.user_id == current_user.id)
+    else:
+        query = query.filter(RevisionNote.user_id.is_(None))
+
     if subject and subject.lower() != "all":
         query = query.filter(RevisionNote.subject.ilike(subject.strip()))
     if topic and topic.lower() != "all":
@@ -176,7 +298,7 @@ def create_revision_note(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
-    """Add a revision note for exam preparation."""
+    """Add a revision note for exam preparation (strictly student-owned)."""
     rev = RevisionNote(
         user_id=current_user.id if current_user else None,
         title=note_in.title,
@@ -194,7 +316,7 @@ def create_revision_note(
 
 
 # ==========================================
-# 4. SUBJECTS, TOPICS & FREQUENTLY ASKED
+# 4. SUBJECTS & TOPICS
 # ==========================================
 
 @router.get("/subjects", response_model=List[str])
@@ -237,32 +359,28 @@ def list_topics(
     return sorted(list(all_topics))
 
 
-@router.get("/frequently-asked-topics", response_model=List[FrequentlyAskedTopicResponse])
-def get_frequently_asked_topics(db: Session = Depends(get_db)):
-    """Calculate topic frequency weights from actual Exam questions in the database."""
-    pyqs = db.query(Question).filter(Question.mode == "exam").all()
-    if not pyqs:
-        return []
+# ==========================================
+# 5. EXAM BOOKMARKS ISOLATION
+# ==========================================
 
-    counts: Dict[str, Dict[str, Any]] = {}
-    for p in pyqs:
-        if p.topic:
-            key = p.topic.strip()
-            if key not in counts:
-                counts[key] = {"subject": p.subject or "General", "count": 0}
-            counts[key]["count"] += 1
+@router.get("/bookmarks", response_model=List[BookmarkResponse])
+def list_exam_bookmarks(
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    """Retrieve only bookmarked items belonging strictly to Exam Mode."""
+    query = db.query(Bookmark)
+    if current_user:
+        query = query.filter(Bookmark.user_id == current_user.id)
 
-    total = len(pyqs)
-    result = []
-    for topic, data in counts.items():
-        weight = round((data["count"] / total) * 100) if total > 0 else 0
-        result.append(
-            FrequentlyAskedTopicResponse(
-                topic=topic,
-                subject=data["subject"],
-                count=data["count"],
-                weight=weight,
-            )
-        )
+    # Subqueries for actual exam items
+    exam_q_ids = [r[0] for r in db.query(Question.id).filter(Question.mode == "exam").all()]
+    formula_ids = [r[0] for r in db.query(Formula.id).all()]
+    rev_note_ids = [r[0] for r in db.query(RevisionNote.id).all()]
+    valid_ids = set(exam_q_ids + formula_ids + rev_note_ids)
 
-    return sorted(result, key=lambda x: x.count, reverse=True)
+    query = query.filter(
+        (Bookmark.url.ilike("anvil://exam/%"))
+        | (Bookmark.content_id.in_(valid_ids))
+    )
+    return query.order_by(Bookmark.created_at.desc()).all()
