@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, Literal
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 DifficultyLevel = Literal["easy", "medium", "hard"]
 ExamCategory = Literal["dsa", "technical", "hr", "system_design", "math", "physics", "cs", "general"]
@@ -33,6 +33,7 @@ class QuestionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: str
+    userId: Optional[str] = Field(None, alias="user_id", serialization_alias="userId")
     title: str
     prompt: str
     description: Optional[str] = None
@@ -51,6 +52,11 @@ class QuestionResponse(BaseModel):
     options: Optional[List[str]] = None
     correctAnswer: Optional[str] = Field(None, alias="correct_answer", serialization_alias="correctAnswer")
     codeSnippet: Optional[str] = Field(None, alias="code_snippet", serialization_alias="codeSnippet")
+
+    @computed_field(alias="isLibrary")
+    @property
+    def is_library(self) -> bool:
+        return self.userId is None
 
 
 class FormulaVariable(BaseModel):
@@ -75,6 +81,7 @@ class FormulaResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: str
+    userId: Optional[str] = Field(None, alias="user_id", serialization_alias="userId")
     name: str
     subject: str
     topic: str
@@ -83,6 +90,11 @@ class FormulaResponse(BaseModel):
     variables: List[Dict[str, Any]] = Field(default_factory=list)
     example: str
     difficulty: Optional[str] = None
+
+    @computed_field(alias="isLibrary")
+    @property
+    def is_library(self) -> bool:
+        return self.userId is None
 
 
 class RevisionNoteCreate(BaseModel):
@@ -101,6 +113,7 @@ class RevisionNoteResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: str
+    userId: Optional[str] = Field(None, alias="user_id", serialization_alias="userId")
     title: str
     subject: str
     topic: str
@@ -109,9 +122,3 @@ class RevisionNoteResponse(BaseModel):
     codeOrSnippet: Optional[str] = Field(None, alias="code_or_snippet", serialization_alias="codeOrSnippet")
     importantFormulas: Optional[List[str]] = Field(None, alias="important_formulas", serialization_alias="importantFormulas")
 
-
-class FrequentlyAskedTopicResponse(BaseModel):
-    topic: str
-    subject: str
-    count: int
-    weight: int

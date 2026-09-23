@@ -4,10 +4,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.schemas.exam import QuestionResponse
 
 DifficultyLevel = Literal["easy", "medium", "hard"]
-InterviewCategory = Literal["dsa", "technical", "hr", "system_design"]
+InterviewCategory = Literal["dsa", "technical", "hr", "system_design", "general"]
 
 
 class InterviewRoundResponse(BaseModel):
+    """Retained for backward compatibility with frontend practice track listings."""
     id: str
     title: str
     category: str
@@ -19,17 +20,22 @@ class InterviewRoundResponse(BaseModel):
 
 
 class SessionStartRequest(BaseModel):
-    roundId: str = Field(..., alias="roundId")
+    category: Optional[str] = "technical"
+    topic: Optional[str] = None
     difficulty: Optional[DifficultyLevel] = "medium"
+    title: Optional[str] = None
+    questionIds: Optional[List[str]] = Field(None, alias="questionIds")
+    roundId: Optional[str] = Field(None, alias="roundId")  # for backward-compatibility
+    context: Optional[str] = None  # optional screen, document, or role context
 
     model_config = ConfigDict(populate_by_name=True)
 
 
 class AnswerFeedback(BaseModel):
-    score: int
+    score: Optional[int] = None
     strengths: List[str] = Field(default_factory=list)
     improvements: List[str] = Field(default_factory=list)
-    keyTakeaway: str = Field(..., serialization_alias="keyTakeaway")
+    keyTakeaway: Optional[str] = Field(None, serialization_alias="keyTakeaway")
     suggestedAnswerSnippet: Optional[str] = Field(None, serialization_alias="suggestedAnswerSnippet")
 
 
@@ -42,11 +48,11 @@ class AnswerEntry(BaseModel):
 
 
 class OverallFeedback(BaseModel):
-    totalScore: int = Field(..., serialization_alias="totalScore")
+    totalScore: Optional[int] = Field(None, serialization_alias="totalScore")
     summary: str
     strengths: List[str] = Field(default_factory=list)
     focusAreas: List[str] = Field(default_factory=list, serialization_alias="focusAreas")
-    recommendation: str
+    recommendation: Optional[str] = None
 
 
 class AnswerSubmitRequest(BaseModel):
@@ -74,6 +80,7 @@ class InterviewSessionResponse(BaseModel):
 class ResumeAnalyzeRequest(BaseModel):
     fileName: str = Field(..., alias="fileName")
     fileContent: str = Field(..., alias="fileContent")
+    targetRole: Optional[str] = Field(None, alias="targetRole")
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -92,3 +99,27 @@ class ResumeAnalysisResponse(BaseModel):
     matchingKeywords: List[str] = Field(default_factory=list, alias="matching_keywords", serialization_alias="matchingKeywords")
     suggestedActionItems: List[str] = Field(default_factory=list, alias="suggested_action_items", serialization_alias="suggestedActionItems")
     sampleQuestions: List[str] = Field(default_factory=list, alias="sample_questions", serialization_alias="sampleQuestions")
+
+
+class QuestionGenerateRequest(BaseModel):
+    content: Optional[str] = None  # Text/document context or prompt
+    imageBase64: Optional[str] = Field(None, alias="imageBase64")  # Base64 screen capture or image
+    category: Optional[str] = "technical"
+    difficulty: Optional[DifficultyLevel] = "medium"
+    count: Optional[int] = 3
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class InterviewCategoryMetric(BaseModel):
+    totalQuestionsAnswered: int = Field(0, serialization_alias="totalQuestionsAnswered")
+    averageScore: Optional[float] = Field(None, serialization_alias="averageScore")
+
+
+class InterviewStatsResponse(BaseModel):
+    totalSessions: int = Field(0, serialization_alias="totalSessions")
+    completedSessions: int = Field(0, serialization_alias="completedSessions")
+    totalQuestionsAnswered: int = Field(0, serialization_alias="totalQuestionsAnswered")
+    averageScore: Optional[float] = Field(None, serialization_alias="averageScore")
+    categoryMetrics: Dict[str, InterviewCategoryMetric] = Field(default_factory=dict, serialization_alias="categoryMetrics")
+    recentSessions: List[Dict[str, Any]] = Field(default_factory=list, serialization_alias="recentSessions")
